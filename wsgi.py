@@ -8,7 +8,7 @@ import os
 os.environ.setdefault('FLASK_ENV', 'production')
 
 # 导入应用工厂
-from app import create_app, init_db
+from app.app import create_app, init_db
 
 # 创建应用实例
 app = create_app('production')
