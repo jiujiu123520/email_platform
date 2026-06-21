@@ -205,10 +205,9 @@ main_deploy() {
     echo ""
 
     # ---- 1: EPEL 源 ----
-    info "========== [1/12] 配置 EPEL 和系统更新 =========="
+    info "========== [1/12] 配置 EPEL =========="
     $PKG_INSTALL epel-release 2>/dev/null || true
-    $PKG_MANAGER update -y
-    success "系统已更新"
+    success "EPEL 已配置"
     echo ""
 
     # ---- 2: 安装基础依赖 ----
@@ -259,15 +258,14 @@ main_deploy() {
             $PKG_INSTALL mariadb-server mariadb
             systemctl start mariadb
             systemctl enable mariadb
-            # 安全初始化
-            mysql_secure_installation <<SECURE
-n
-Y
-Y
-Y
-Y
-Y
-SECURE
+            # 直接设置 root 密码（替代 mysql_secure_installation）
+            mysql -u root <<SQLEOF
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+SQLEOF
         else
             # CentOS 8/9 使用 mysql-server
             $PKG_INSTALL mysql-server
@@ -372,11 +370,12 @@ EOF
 
     # ---- 9: 初始化数据库 ----
     info "========== [9/12] 初始化数据库表 =========="
-    export $(cat .env | xargs)
+    source venv/bin/activate
+    export FLASK_ENV=production
     python3 -c "
 import sys
 sys.path.insert(0, '${DEPLOY_DIR}')
-from app import create_app, init_db
+from app.app import create_app, init_db
 app = create_app('production')
 with app.app_context():
     init_db(app)
@@ -460,7 +459,7 @@ command=${DEPLOY_DIR}/venv/bin/gunicorn \
     --access-logfile ${LOG_DIR}/gunicorn_access.log \
     --error-logfile ${LOG_DIR}/gunicorn_error.log \
     --log-level info \
-    "app:create_app('production')"
+    wsgi:app
 
 directory=${DEPLOY_DIR}
 user=root
