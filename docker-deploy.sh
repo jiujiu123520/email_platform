@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# 邮件发送平台 - Docker 一键部署脚本 (CentOS 7 腾讯云镜像版)
-# 无需 git，使用 curl 下载源码
+# 邮件发送平台 - Docker 一键部署脚本 (DaoCloud 镜像版)
+# 版本: 2024-06-21
 # ============================================================
 
 set -e
@@ -51,8 +51,8 @@ info "获取项目源码..."
 if [ ! -f "$PROJECT_DIR/app.py" ]; then
     cd /tmp
     rm -f email_platform.zip
-    curl -L -o email_platform.zip https://gh.jasonzeng.dev/https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip || \
-    curl -L -o email_platform.zip https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip
+    curl -L -o email_platform.zip "https://gh.jasonzeng.dev/https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip" || \
+    curl -L -o email_platform.zip "https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip"
     unzip -o email_platform.zip
     cp -r email_platform-main/* "$PROJECT_DIR/"
     cp -r email_platform-main/.* "$PROJECT_DIR/" 2>/dev/null || true
