@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # 邮件发送平台 - Docker 一键部署脚本 (CentOS 7 腾讯云镜像版)
-# 自动创建目录，使用腾讯云镜像，无需访问 Docker Hub
+# 无需 git，使用 curl 下载源码
 # ============================================================
 
 set -e
@@ -46,11 +46,18 @@ info "创建项目目录 $PROJECT_DIR..."
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# 克隆项目
+# 获取项目源码（使用 curl 下载 zip，无需 git）
 info "获取项目源码..."
-if [ ! -d "$PROJECT_DIR/.git" ]; then
-    git clone https://gh.jasonzeng.dev/https://github.com/jiujiu123520/email_platform.git . || \
-    git clone https://github.com/jiujiu123520/email_platform.git .
+if [ ! -f "$PROJECT_DIR/app.py" ]; then
+    cd /tmp
+    rm -f email_platform.zip
+    curl -L -o email_platform.zip https://gh.jasonzeng.dev/https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip || \
+    curl -L -o email_platform.zip https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip
+    unzip -o email_platform.zip
+    cp -r email_platform-main/* "$PROJECT_DIR/"
+    cp -r email_platform-main/.* "$PROJECT_DIR/" 2>/dev/null || true
+    rm -rf email_platform.zip email_platform-main
+    cd "$PROJECT_DIR"
 fi
 
 # 复制 Nginx 配置
