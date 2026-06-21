@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮件发送平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; padding: 40px; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { color: #667eea; font-size: 28px; margin-bottom: 8px; }
+        .logo p { color: #888; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-group input { width: 100%; padding: 12px 16px; border: 2px solid #e1e1e1; border-radius: 10px; font-size: 14px; transition: border-color 0.3s; }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .links { display: flex; justify-content: space-between; margin-top: 20px; }
+        .links a { color: #667eea; text-decoration: none; font-size: 14px; }
+        .links a:hover { text-decoration: underline; }
+        .alert { padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .alert.error { background: #fee; color: #c00; border: 1px solid #fcc; }
+        .alert.success { background: #efe; color: #060; border: 1px solid #cfc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>邮件发送平台</h1>
+            <p>企业级邮件营销解决方案 - PHP Version</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="password" name="password" placeholder="请输入密码" required>
+            </div>
+            <button type="submit" class="btn" id="submitBtn">登 录</button>
+            <div class="links">
+                <a href="register.html">注册账号</a>
+                <a href="dashboard.html">进入后台</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v2';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const alert = document.getElementById('alert');
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            alert.style.display = 'none';
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    localStorage.setItem('token', data.data.token);
+                    localStorage.setItem('user', JSON.stringify(data.data.user));
+                    alert.className = 'alert success';
+                    alert.textContent = '登录成功，正在跳转...';
+                    alert.style.display = 'block';
+                    setTimeout(() => window.location.href = 'dashboard.html', 1000);
+                } else {
+                    alert.className = 'alert error';
+                    alert.textContent = data.message || '登录失败';
+                    alert.style.display = 'block';
+                }
+            } catch (err) {
+                alert.className = 'alert error';
+                alert.textContent = '网络错误，请稍后重试';
+                alert.style.display = 'block';
+            }
+
+            btn.disabled = false;
+            btn.textContent = '登 录';
+        });
+    </script>
+</body>
+</html>
