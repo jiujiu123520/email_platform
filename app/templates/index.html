@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮件发送平台</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --sidebar-width: 260px;
+            --header-height: 60px;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        /* 登录页 */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 40px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        .login-card h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
+        .login-card p { text-align: center; color: var(--text-secondary); margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-sm { padding: 6px 14px; width: auto; font-size: 13px; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .alert {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            display: none;
+        }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        [data-theme="dark"] .alert-error { background: #450a0a; border-color: #7f1d1d; }
+        /* 主布局 */
+        .app-layout { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-header .logo {
+            width: 36px; height: 36px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 18px;
+        }
+        .sidebar-header h2 { font-size: 16px; }
+        .sidebar-nav { padding: 12px 0; }
+        .nav-section { padding: 8px 20px; font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 1px; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: var(--bg); color: var(--text); }
+        .nav-item.active { color: var(--primary); background: var(--bg); border-left-color: var(--primary); font-weight: 600; }
+        .nav-item .icon { width: 20px; margin-right: 12px; text-align: center; }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            min-height: 100vh;
+        }
+        .top-header {
+            height: var(--header-height);
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .top-header h1 { font-size: 18px; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .user-info { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .page-content { padding: 24px; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-header h2 { font-size: 16px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; }
+        .stat-card .value.success { color: var(--success); }
+        .stat-card .value.danger { color: var(--danger); }
+        .stat-card .value.warning { color: var(--warning); }
+        .stat-card .value.primary { color: var(--primary); }
+        /* 表格 */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text-secondary); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success { background: #dcfce7; color: #16a34a; }
+        .badge-danger { background: #fef2f2; color: #dc2626; }
+        .badge-warning { background: #fef3c7; color: #d97706; }
+        .badge-info { background: #dbeafe; color: #2563eb; }
+        .badge-secondary { background: #f1f5f9; color: #64748b; }
+        [data-theme="dark"] .badge-success { background: #14532d; }
+        [data-theme="dark"] .badge-danger { background: #450a0a; }
+        [data-theme="dark"] .badge-warning { background: #451a03; }
+        [data-theme="dark"] .badge-info { background: #172554; }
+        [data-theme="dark"] .badge-secondary { background: #334155; }
+        /* 分页 */
+        .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .pagination button {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+        .pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 20px; font-size: 18px; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+        /* 主题切换按钮 */
+        .theme-toggle {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        /* 移动端菜单按钮 */
+        .mobile-menu-btn {
+            display: none;
+            width: 36px; height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        /* 页面隐藏 */
+        .page { display: none; }
+        .page.active { display: block; }
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .main-content { margin-left: 0; }
+            .mobile-menu-btn { display: flex; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        /* 加载动画 */
+        .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <!-- 登录页 -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <h1>📧 邮件发送平台</h1>
+            <p>多用户权限系统 | 邮件模板 + SMTP中继 + Open API</p>
+            <div id="loginError" class="alert alert-error"></div>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+            </div>
+            <button class="btn btn-primary" onclick="handleLogin()">登 录</button>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="appPage" class="app-layout" style="display:none;">
+        <!-- 侧边栏遮罩 -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- 侧边栏 -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">E</div>
+                <h2>邮件发送平台</h2>
+            </div>
+            <div class="sidebar-nav" id="sidebarNav">
+                <!-- 导航菜单由JS动态生成 -->
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <div class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-header">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                    <h1 id="pageTitle">仪表盘</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+                    <div class="user-info">
+                        <span id="userName">管理员</span>
+                        <button class="btn btn-sm btn-secondary" onclick="handleLogout()">退出</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 页面内容 -->
+            <div class="page-content">
+                <!-- 仪表盘 -->
+                <div id="page-dashboard" class="page active">
+                    <div class="stats-grid" id="dashboardStats"></div>
+                    <div class="card">
+                        <div class="card-header"><h2>最近发送记录</h2></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>收件人</th><th>标题</th><th>状态</th><th>发送时间</th></tr></thead>
+                                <tbody id="recentRecords"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模板管理 -->
+                <div id="page-templates" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>邮件模板管理</h2>
+                            <button class="btn btn-sm btn-primary" onclick="showCreateTemplate()">+ 新建模板</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>名称</th><th>标题</th><th>分类</th><th>创建者</th><th>创建时间</th><th>操作</th></tr></thead>
+                                <tbody id="templateList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 发送邮件 -->
+                <div id="page-send" class="page">
+                    <div class="card">
+                        <div class="card-header"><h2>发送邮件</h2></div>
+                        <div class="form-group">
+                            <label>收件人邮箱</label>
+                            <input type="email" id="sendToEmail" placeholder="example@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>收件人姓名</label>
+                            <input type="text" id="sendToName" placeholder="可选">
+                        </div>
+                        <div class="form-group">
+                            <label>邮件标题</label>
+                            <input type="text" id="sendSubject" placeholder="邮件标题">
+                        </div>
+                        <div class="form-group">
+                            <label>使用模板</label>
+                            <select id="sendTemplate" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+                                <option value="">不使用模板</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>HTML内容</label>
+                            <textarea id="sendHtmlContent" rows="10" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:monospace;" placeholder="输入HTML内容"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="handleSendEmail()" style="width:auto;">发送邮件</button>
+                    </div>
+                </div>
+
+                <!-- 发送记录 -->
+                <div id="page-records" class="page">
+                    <div class="card">
+                        <div class="card-header"><h2>发送记录</h2></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>收件人</th><th>标题</th><th>类型</th><th>状态</th><th>中继</th><th>重试</th><th>发送时间</th></tr></thead>
+                                <tbody id="recordList"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="recordPagination"></div>
+                    </div>
+                </div>
+
+                <!-- SMTP中继 -->
+                <div id="page-relays" class="page">
+                    <div class="stats-grid" id="relayStats"></div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>SMTP中继管理</h2>
+                            <button class="btn btn-sm btn-primary" onclick="showCreateRelay()">+ 添加中继</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>名称</th><th>主机</th><th>状态</th><th>健康</th><th>成功率</th><th>今日/配额</th><th>操作</th></tr></thead>
+                                <tbody id="relayList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 用户管理 -->
+                <div id="page-users" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>用户管理</h2>
+                            <button class="btn btn-sm btn-primary" onclick="showCreateUser()">+ 新建用户</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>配额</th><th>最后登录</th><th>操作</th></tr></thead>
+                                <tbody id="userList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 审计日志 -->
+                <div id="page-audit" class="page">
+                    <div class="card">
+                        <div class="card-header"><h2>系统审计日志</h2></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>时间</th><th>用户</th><th>操作</th><th>模块</th><th>描述</th><th>IP</th><th>结果</th></tr></thead>
+                                <tbody id="auditList"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="auditPagination"></div>
+                    </div>
+                </div>
+
+                <!-- 个人中心 -->
+                <div id="page-profile" class="page">
+                    <div class="card">
+                        <div class="card-header"><h2>个人信息</h2></div>
+                        <div id="profileInfo"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>配额信息</h2></div>
+                        <div id="quotaInfo"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2>个人统计</h2></div>
+                        <div id="personalStats"></div>
+                    </div>
+                </div>
+
+                <!-- 常见问题 -->
+                <div id="page-faq" class="page">
+                    <div class="card">
+                        <div class="card-header"><h2>常见问题 FAQ</h2></div>
+                        <div id="faqList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <script>
+    // ==================== 全局状态 ====================
+    const API_BASE = '/api/v2';
+    let token = localStorage.getItem('token') || '';
+    let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+    let currentPage = 'dashboard';
+
+    // ==================== 工具函数 ====================
+    async function api(method, path, data = null) {
+        const opts = {
+            method,
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        };
+        if (data) opts.body = JSON.stringify(data);
+        const res = await fetch(API_BASE + path, opts);
+        const json = await res.json();
+        if (json.code === 401) { handleLogout(); return null; }
+        return json;
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleString('zh-CN');
+    }
+
+    function statusBadge(status) {
+        const map = {
+            sent: ['badge-success', '已发送'], success: ['badge-success', '成功'],
+            failed: ['badge-danger', '失败'], failure: ['badge-danger', '失败'],
+            pending: ['badge-warning', '待发送'], sending: ['badge-info', '发送中'],
+            active: ['badge-success', '正常'], locked: ['badge-danger', '锁定'],
+            disabled: ['badge-secondary', '禁用'], paused: ['badge-warning', '暂停'],
+            completed: ['badge-success', '完成'], processing: ['badge-info', '处理中'],
+            queued: ['badge-warning', '队列中'],
+        };
+        const [cls, text] = map[status] || ['badge-secondary', status];
+        return `<span class="badge ${cls}">${text}</span>`;
+    }
+
+    function showModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    // ==================== 主题管理 ====================
+    function initTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+            document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+        } else {
+            const hour = new Date().getHours();
+            const isLight = hour >= 7 && hour < 19;
+            document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+            document.getElementById('themeBtn').textContent = isLight ? '🌙' : '☀️';
+        }
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ==================== 认证 ====================
+    async function handleLogin() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        if (!username || !password) {
+            document.getElementById('loginError').textContent = '请输入用户名和密码';
+            document.getElementById('loginError').style.display = 'block';
+            return;
+        }
+        try {
+            const res = await fetch(API_BASE + '/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const json = await res.json();
+            if (json.code === 200) {
+                token = json.access_token;
+                currentUser = json.user;
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                showApp();
+            } else {
+                document.getElementById('loginError').textContent = json.message;
+                document.getElementById('loginError').style.display = 'block';
+            }
+        } catch (e) {
+            document.getElementById('loginError').textContent = '网络错误，请稍后重试';
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function handleLogout() {
+        token = '';
+        currentUser = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('appPage').style.display = 'none';
+    }
+
+    // ==================== 导航 ====================
+    function buildNav() {
+        const isAdmin = currentUser && currentUser.role !== 'user';
+        const isSuperAdmin = currentUser && currentUser.role === 'super_admin';
+        let items = [
+            { id: 'dashboard', icon: '📊', label: '仪表盘', page: 'dashboard' },
+            { id: 'templates', icon: '📝', label: '模板管理', page: 'templates' },
+            { id: 'send', icon: '✉️', label: '发送邮件', page: 'send' },
+            { id: 'records', icon: '📋', label: '发送记录', page: 'records' },
+        ];
+        if (isAdmin) {
+            items.push({ section: '系统管理' });
+            items.push({ id: 'relays', icon: '🔄', label: 'SMTP中继', page: 'relays' });
+        }
+        if (isSuperAdmin) {
+            items.push({ id: 'users', icon: '👥', label: '用户管理', page: 'users' });
+            items.push({ id: 'audit', icon: '🔍', label: '审计日志', page: 'audit' });
+        }
+        items.push({ section: '其他' });
+        items.push({ id: 'profile', icon: '👤', label: '个人中心', page: 'profile' });
+        items.push({ id: 'faq', icon: '❓', label: '常见问题', page: 'faq' });
+
+        let html = '';
+        for (const item of items) {
+            if (item.section) {
+                html += `<div class="nav-section">${item.section}</div>`;
+            } else {
+                html += `<a class="nav-item" data-page="${item.page}" onclick="navigateTo('${item.page}')">
+                    <span class="icon">${item.icon}</span>${item.label}</a>`;
+            }
+        }
+        document.getElementById('sidebarNav').innerHTML = html;
+    }
+
+    function navigateTo(page) {
+        currentPage = page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+
+        const titles = {
+            dashboard: '仪表盘', templates: '模板管理', send: '发送邮件',
+            records: '发送记录', relays: 'SMTP中继管理', users: '用户管理',
+            audit: '审计日志', profile: '个人中心', faq: '常见问题',
+        };
+        document.getElementById('pageTitle').textContent = titles[page] || '';
+
+        // 加载页面数据
+        loadPageData(page);
+        // 移动端关闭侧边栏
+        if (window.innerWidth <= 768) toggleSidebar();
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    // ==================== 页面数据加载 ====================
+    async function loadPageData(page) {
+        switch (page) {
+            case 'dashboard': loadDashboard(); break;
+            case 'templates': loadTemplates(); break;
+            case 'records': loadRecords(); break;
+            case 'relays': loadRelays(); break;
+            case 'users': loadUsers(); break;
+            case 'audit': loadAuditLogs(); break;
+            case 'profile': loadProfile(); break;
+            case 'faq': loadFaq(); break;
+            case 'send': loadTemplateOptions(); break;
+        }
+    }
+
+    async function loadDashboard() {
+        const res = await api('GET', '/email/records?page=1&per_page=5');
+        if (res && res.data) {
+            const tbody = document.getElementById('recentRecords');
+            tbody.innerHTML = res.data.items.map(r => `
+                <tr>
+                    <td>${r.to_email}</td>
+                    <td>${r.subject}</td>
+                    <td>${statusBadge(r.status)}</td>
+                    <td>${formatDate(r.created_at)}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无发送记录</td></tr>';
+        }
+    }
+
+    async function loadTemplates() {
+        const res = await api('GET', '/templates?page=1&per_page=50');
+        if (res && res.data) {
+            document.getElementById('templateList').innerHTML = res.data.items.map(t => `
+                <tr>
+                    <td>${t.name}</td>
+                    <td>${t.subject}</td>
+                    <td><span class="badge badge-info">${t.category}</span></td>
+                    <td>${t.creator_name}</td>
+                    <td>${formatDate(t.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无模板</td></tr>';
+        }
+    }
+
+    async function loadTemplateOptions() {
+        const res = await api('GET', '/templates?page=1&per_page=100');
+        const sel = document.getElementById('sendTemplate');
+        sel.innerHTML = '<option value="">不使用模板</option>';
+        if (res && res.data) {
+            res.data.items.forEach(t => {
+                sel.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+            });
+        }
+    }
+
+    async function loadRecords(page = 1) {
+        const res = await api('GET', `/email/records?page=${page}&per_page=20`);
+        if (res && res.data) {
+            document.getElementById('recordList').innerHTML = res.data.items.map(r => `
+                <tr>
+                    <td>${r.to_email}</td>
+                    <td>${r.subject}</td>
+                    <td><span class="badge badge-info">${r.send_type === 'batch' ? '群发' : '单发'}</span></td>
+                    <td>${statusBadge(r.status)}</td>
+                    <td>${r.relay_id || '-'}</td>
+                    <td>${r.status === 'failed' ? `<button class="btn btn-sm btn-warning" onclick="retryEmail(${r.id})">重试</button>` : '-'}</td>
+                    <td>${formatDate(r.created_at)}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无记录</td></tr>';
+        }
+    }
+
+    async function loadRelays() {
+        const res = await api('GET', '/relays?page=1&per_page=50');
+        if (res && res.data) {
+            const items = res.data.items;
+            const active = items.filter(r => r.status === 'active').length;
+            const paused = items.filter(r => r.status === 'paused').length;
+            const healthy = items.filter(r => r.is_healthy).length;
+            document.getElementById('relayStats').innerHTML = `
+                <div class="stat-card"><div class="label">中继总数</div><div class="value primary">${items.length}</div></div>
+                <div class="stat-card"><div class="label">活跃中继</div><div class="value success">${active}</div></div>
+                <div class="stat-card"><div class="label">已暂停</div><div class="value warning">${paused}</div></div>
+                <div class="stat-card"><div class="label">健康</div><div class="value success">${healthy}</div></div>
+            `;
+            document.getElementById('relayList').innerHTML = items.map(r => `
+                <tr>
+                    <td>${r.name}</td>
+                    <td>${r.host}:${r.port}</td>
+                    <td>${statusBadge(r.status)}</td>
+                    <td>${r.is_healthy ? '✅' : '❌'}</td>
+                    <td>${r.success_rate}%</td>
+                    <td>${r.daily_sent}/${r.daily_quota}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="testRelay(${r.id})">测试</button>
+                        <button class="btn btn-sm btn-secondary" onclick="resetRelay(${r.id})">重置</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无中继</td></tr>';
+        }
+    }
+
+    async function loadUsers() {
+        const res = await api('GET', '/users?page=1&per_page=50');
+        if (res && res.data) {
+            document.getElementById('userList').innerHTML = res.data.items.map(u => `
+                <tr>
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-info">${u.role}</span></td>
+                    <td>${statusBadge(u.status)}</td>
+                    <td>${u.used_quota_today}/${u.daily_quota}</td>
+                    <td>${formatDate(u.last_login_time)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="unlockUser(${u.id})">解锁</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无用户</td></tr>';
+        }
+    }
+
+    async function loadAuditLogs(page = 1) {
+        const res = await api('GET', `/audit/logs?page=${page}&per_page=20`);
+        if (res && res.data) {
+            document.getElementById('auditList').innerHTML = res.data.items.map(l => `
+                <tr>
+                    <td>${formatDate(l.created_at)}</td>
+                    <td>${l.username}</td>
+                    <td>${l.action}</td>
+                    <td>${l.module}</td>
+                    <td>${l.description}</td>
+                    <td>${l.ip_address}</td>
+                    <td>${statusBadge(l.result)}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:40px;">暂无日志</td></tr>';
+        }
+    }
+
+    async function loadProfile() {
+        const res = await api('GET', '/profile/info');
+        if (res && res.data) {
+            document.getElementById('profileInfo').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div><strong>用户名：</strong>${res.data.username}</div>
+                    <div><strong>邮箱：</strong>${res.data.email}</div>
+                    <div><strong>显示名：</strong>${res.data.display_name || '-'}</div>
+                    <div><strong>角色：</strong>${res.data.role}</div>
+                    <div><strong>状态：</strong>${res.data.status}</div>
+                    <div><strong>最后登录：</strong>${formatDate(res.data.last_login_time)}</div>
+                </div>
+            `;
+        }
+        const quota = await api('GET', '/profile/quota');
+        if (quota && quota.data) {
+            const d = quota.data;
+            const pct = d.daily_quota > 0 ? Math.round(d.used_quota_today / d.daily_quota * 100) : 0;
+            document.getElementById('quotaInfo').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div class="stat-card"><div class="label">每日配额</div><div class="value primary">${d.daily_quota}</div></div>
+                    <div class="stat-card"><div class="label">已使用</div><div class="value warning">${d.used_quota_today}</div></div>
+                    <div class="stat-card"><div class="label">剩余</div><div class="value success">${d.remaining_quota}</div></div>
+                </div>
+                <div style="margin-top:16px;background:var(--border);border-radius:8px;height:8px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${pct > 80 ? 'var(--danger)' : 'var(--primary)'};border-radius:8px;transition:width 0.3s;"></div>
+                </div>
+            `;
+        }
+        const stats = await api('GET', '/profile/statistics');
+        if (stats && stats.data) {
+            const s = stats.data;
+            document.getElementById('personalStats').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="label">今日发送</div><div class="value primary">${s.today_sent}</div></div>
+                    <div class="stat-card"><div class="label">今日成功</div><div class="value success">${s.today_success}</div></div>
+                    <div class="stat-card"><div class="label">本周发送</div><div class="value primary">${s.week_sent}</div></div>
+                    <div class="stat-card"><div class="label">本周成功</div><div class="value success">${s.week_success}</div></div>
+                    <div class="stat-card"><div class="label">总发送</div><div class="value primary">${s.total_sent}</div></div>
+                    <div class="stat-card"><div class="label">总成功</div><div class="value success">${s.total_success}</div></div>
+                </div>
+            `;
+        }
+    }
+
+    async function loadFaq() {
+        const res = await api('GET', '/faq');
+        if (res && res.data) {
+            document.getElementById('faqList').innerHTML = res.data.map(f => `
+                <div style="margin-bottom:16px;padding:16px;border:1px solid var(--border);border-radius:8px;">
+                    <h3 style="margin-bottom:8px;font-size:15px;">Q: ${f.question}</h3>
+                    <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">A: ${f.answer}</p>
+                </div>
+            `).join('');
+        }
+    }
+
+    // ==================== 操作函数 ====================
+    async function handleSendEmail() {
+        const to_email = document.getElementById('sendToEmail').value.trim();
+        const to_name = document.getElementById('sendToName').value.trim();
+        const subject = document.getElementById('sendSubject').value.trim();
+        const template_id = document.getElementById('sendTemplate').value;
+        const html_content = document.getElementById('sendHtmlContent').value;
+
+        if (!to_email || !subject) { alert('请填写收件人邮箱和标题'); return; }
+
+        const res = await api('POST', '/email/send', {
+            to_email, to_name, subject, html_content,
+            template_id: template_id ? parseInt(template_id) : null,
+        });
+        if (res) {
+            alert(res.message);
+            if (res.code === 200) {
+                document.getElementById('sendToEmail').value = '';
+                document.getElementById('sendToName').value = '';
+                document.getElementById('sendSubject').value = '';
+                document.getElementById('sendHtmlContent').value = '';
+            }
+        }
+    }
+
+    async function deleteTemplate(id) {
+        if (!confirm('确定删除此模板？此操作不可恢复！')) return;
+        const res = await api('DELETE', `/templates/${id}`);
+        if (res) { alert(res.message); loadTemplates(); }
+    }
+
+    async function retryEmail(id) {
+        const res = await api('POST', `/email/records/${id}/retry`);
+        if (res) { alert(res.message); loadRecords(); }
+    }
+
+    async function testRelay(id) {
+        const res = await api('POST', `/relays/${id}/test`);
+        if (res) { alert(res.message); loadRelays(); }
+    }
+
+    async function resetRelay(id) {
+        const res = await api('POST', `/relays/${id}/reset-health`);
+        if (res) { alert(res.message); loadRelays(); }
+    }
+
+    async function unlockUser(id) {
+        const res = await api('POST', `/users/${id}/unlock`);
+        if (res) { alert(res.message); loadUsers(); }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm('确定删除此用户？此操作不可恢复！')) return;
+        const res = await api('DELETE', `/users/${id}`);
+        if (res) { alert(res.message); loadUsers(); }
+    }
+
+    function showCreateTemplate() {
+        showModal(`
+            <h2>新建邮件模板</h2>
+            <div class="form-group"><label>模板名称</label><input type="text" id="tplName"></div>
+            <div class="form-group"><label>邮件标题</label><input type="text" id="tplSubject"></div>
+            <div class="form-group"><label>分类</label><input type="text" id="tplCategory" value="general"></div>
+            <div class="form-group"><label>HTML内容</label><textarea id="tplHtml" rows="10" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:monospace;"></textarea></div>
+            <div class="modal-actions">
+                <button class="btn btn-sm btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-sm btn-primary" onclick="createTemplate()">创建</button>
+            </div>
+        `);
+    }
+
+    async function createTemplate() {
+        const res = await api('POST', '/templates', {
+            name: document.getElementById('tplName').value,
+            subject: document.getElementById('tplSubject').value,
+            category: document.getElementById('tplCategory').value,
+            html_content: document.getElementById('tplHtml').value,
+        });
+        if (res) { closeModal(); alert(res.message); loadTemplates(); }
+    }
+
+    function showCreateRelay() {
+        showModal(`
+            <h2>添加SMTP中继</h2>
+            <div class="form-group"><label>名称</label><input type="text" id="relayName"></div>
+            <div class="form-group"><label>主机地址</label><input type="text" id="relayHost"></div>
+            <div class="form-group"><label>端口</label><input type="number" id="relayPort" value="587"></div>
+            <div class="form-group"><label>用户名</label><input type="text" id="relayUser"></div>
+            <div class="form-group"><label>密码</label><input type="password" id="relayPass"></div>
+            <div class="form-group"><label>权重</label><input type="number" id="relayWeight" value="10"></div>
+            <div class="form-group"><label>每日配额</label><input type="number" id="relayQuota" value="10000"></div>
+            <div class="modal-actions">
+                <button class="btn btn-sm btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-sm btn-primary" onclick="createRelay()">添加</button>
+            </div>
+        `);
+    }
+
+    async function createRelay() {
+        const res = await api('POST', '/relays', {
+            name: document.getElementById('relayName').value,
+            host: document.getElementById('relayHost').value,
+            port: parseInt(document.getElementById('relayPort').value),
+            username: document.getElementById('relayUser').value,
+            password: document.getElementById('relayPass').value,
+            weight: parseInt(document.getElementById('relayWeight').value),
+            daily_quota: parseInt(document.getElementById('relayQuota').value),
+        });
+        if (res) { closeModal(); alert(res.message); loadRelays(); }
+    }
+
+    function showCreateUser() {
+        showModal(`
+            <h2>新建用户</h2>
+            <div class="form-group"><label>用户名</label><input type="text" id="newUsername"></div>
+            <div class="form-group"><label>邮箱</label><input type="email" id="newEmail"></div>
+            <div class="form-group"><label>密码</label><input type="password" id="newPassword"></div>
+            <div class="form-group"><label>角色</label>
+                <select id="newRole" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                </select>
+            </div>
+            <div class="form-group"><label>每日配额</label><input type="number" id="newQuota" value="1000"></div>
+            <div class="modal-actions">
+                <button class="btn btn-sm btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-sm btn-primary" onclick="createUser()">创建</button>
+            </div>
+        `);
+    }
+
+    async function createUser() {
+        const res = await api('POST', '/users', {
+            username: document.getElementById('newUsername').value,
+            email: document.getElementById('newEmail').value,
+            password: document.getElementById('newPassword').value,
+            role: document.getElementById('newRole').value,
+            daily_quota: parseInt(document.getElementById('newQuota').value),
+        });
+        if (res) { closeModal(); alert(res.message); loadUsers(); }
+    }
+
+    // ==================== 初始化 ====================
+    function showApp() {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('appPage').style.display = 'flex';
+        document.getElementById('userName').textContent = currentUser.display_name || currentUser.username;
+        buildNav();
+        navigateTo('dashboard');
+    }
+
+    // 页面加载
+    initTheme();
+    if (token && currentUser) {
+        showApp();
+    }
+
+    // 回车登录
+    document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') handleLogin();
+    });
+    </script>
+</body>
+</html>
