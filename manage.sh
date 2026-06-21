@@ -52,12 +52,28 @@ install_docker() {
     info "开始 Docker 部署..."
     echo ""
 
-    # 检查 Docker
-    if ! command -v docker &> /dev/null; then
-        error "Docker 未安装，请先安装 Docker"
+    # 检测系统
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+    else
+        error "无法检测系统类型"
     fi
 
-    # 修复 docker-compose
+    # 自动安装 Docker（如果未安装）
+    if ! command -v docker &> /dev/null; then
+        warn "Docker 未安装，正在自动安装..."
+        read -p "  是否自动安装 Docker? (y/n) [默认: y]: " install_docker_confirm
+        install_docker_confirm=${install_docker_confirm:-y}
+        if [[ "$install_docker_confirm" =~ ^[Yy]$ ]]; then
+            install_docker_auto
+        else
+            error "Docker 未安装，请先安装 Docker"
+        fi
+    fi
+    success "Docker 可用"
+
+    # 修复/安装 docker-compose
     info "检查 docker-compose..."
     if command -v docker-compose &>/dev/null; then
         if ! docker-compose version &>/dev/null; then
@@ -70,6 +86,24 @@ install_docker() {
         pip3 install docker-compose 2>/dev/null || pip install docker-compose
     fi
     success "docker-compose 可用"
+
+    # 配置国内镜像加速（如果未配置）
+    if [ ! -f /etc/docker/daemon.json ]; then
+        info "配置 Docker 国内镜像加速..."
+        mkdir -p /etc/docker
+        cat > /etc/docker/daemon.json << 'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com",
+    "https://docker.m.daocloud.io"
+  ]
+}
+EOF
+        systemctl restart docker
+        success "镜像加速配置完成"
+    fi
 
     # 交互式配置
     echo ""
@@ -255,41 +289,25 @@ install_normal() {
     read -p "  数据库密码 [默认: EmailPlatform2024!]: " db_pass
     DB_PASS=${db_pass:-EmailPlatform2024!'}
 
-    # 安装基础工具
-    info "安装基础工具..."
-    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-        yum install -y epel-release gcc make openssl-devel bzip2-devel libffi-devel wget curl vim unzip
-    else
-        apt-get update
-        apt-get install -y wget curl vim unzip git gcc make libssl-dev libbz2-dev libffi-dev
-    fi
+    # 自动安装基础工具（如果未安装）
+    info "检查并安装基础工具..."
+    install_basics
 
-    # 安装 Python 3.9
-    info "安装 Python 3.9..."
+    # 自动安装 Python 3.9（如果未安装）
+    info "检查 Python 3.9..."
     if ! command -v python3.9 &>/dev/null; then
-        if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-            yum install -y python39 python39-devel python39-pip
-        else
-            apt-get install -y software-properties-common
-            add-apt-repository -y ppa:deadsnakes/ppa
-            apt-get update
-            apt-get install -y python3.9 python3.9-venv python3.9-dev
-        fi
+        warn "Python 3.9 未安装，正在自动安装..."
+        install_python39
     fi
+    success "Python 3.9 可用"
 
-    # 安装数据库
-    info "安装数据库..."
+    # 自动安装数据库（如果未安装）
+    info "检查数据库..."
     if ! command -v mysql &>/dev/null; then
-        if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-            yum install -y mariadb-server mariadb-devel
-            systemctl start mariadb
-            systemctl enable mariadb
-        else
-            apt-get install -y mysql-server mysql-client libmysqlclient-dev
-            systemctl start mysql
-            systemctl enable mysql
-        fi
+        warn "MySQL/MariaDB 未安装，正在自动安装..."
+        install_mysql
     fi
+    success "MySQL/MariaDB 可用"
 
     DB_NAME="email_platform"
     DB_USER="email_user"
@@ -300,28 +318,20 @@ FLUSH PRIVILEGES;
 DBEOF
 
     # 安装 Redis
-    info "安装 Redis..."
+    info "检查 Redis..."
     if ! command -v redis-server &>/dev/null; then
-        if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-            yum install -y redis
-        else
-            apt-get install -y redis-server
-        fi
-        systemctl start redis
-        systemctl enable redis
+        warn "Redis 未安装，正在自动安装..."
+        install_redis
     fi
+    success "Redis 可用"
 
     # 安装 Nginx
-    info "安装 Nginx..."
+    info "检查 Nginx..."
     if ! command -v nginx &>/dev/null; then
-        if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-            yum install -y nginx
-        else
-            apt-get install -y nginx
-        fi
-        systemctl start nginx
-        systemctl enable nginx
+        warn "Nginx 未安装，正在自动安装..."
+        install_nginx
     fi
+    success "Nginx 可用"
 
     # 下载项目
     info "下载项目源码..."
@@ -387,12 +397,12 @@ EOF
     nginx -t && systemctl reload nginx
 
     # 配置 Supervisor
-    info "配置 Supervisor..."
-    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
-        yum install -y supervisor
+    info "检查 Supervisor..."
+    if ! command -v supervisorctl &>/dev/null; then
+        warn "Supervisor 未安装，正在自动安装..."
+        install_supervisor
     fi
-    systemctl start supervisord 2>/dev/null || systemctl start supervisor 2>/dev/null
-    systemctl enable supervisord 2>/dev/null || systemctl enable supervisor 2>/dev/null
+    success "Supervisor 可用"
 
     cat > /etc/supervisord.d/email_platform.ini << EOF
 [program:email_platform]
@@ -488,6 +498,98 @@ DBEOF
 # ============================================================
 # 公共函数
 # ============================================================
+
+# 自动安装 Docker
+install_docker_auto() {
+    info "正在安装 Docker..."
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y yum-utils
+        yum-config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo 2>/dev/null || \
+        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        yum install -y docker-ce docker-ce-cli containerd.io
+    else
+        apt-get update
+        apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | apt-key add - 2>/dev/null || \
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+        add-apt-repository "deb [arch=amd64] https://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable" 2>/dev/null || \
+        add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io
+    fi
+    systemctl start docker
+    systemctl enable docker
+    success "Docker 安装完成"
+}
+
+# 自动安装基础工具
+install_basics() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y epel-release gcc make openssl-devel bzip2-devel libffi-devel wget curl vim unzip 2>/dev/null || true
+    else
+        apt-get update
+        apt-get install -y wget curl vim unzip git gcc make libssl-dev libbz2-dev libffi-dev
+    fi
+}
+
+# 自动安装 Python 3.9
+install_python39() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y python39 python39-devel python39-pip
+    else
+        apt-get install -y software-properties-common
+        add-apt-repository -y ppa:deadsnakes/ppa
+        apt-get update
+        apt-get install -y python3.9 python3.9-venv python3.9-dev
+    fi
+}
+
+# 自动安装 MySQL/MariaDB
+install_mysql() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y mariadb-server mariadb-devel
+        systemctl start mariadb
+        systemctl enable mariadb
+    else
+        apt-get install -y mysql-server mysql-client libmysqlclient-dev
+        systemctl start mysql
+        systemctl enable mysql
+    fi
+}
+
+# 自动安装 Redis
+install_redis() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y redis
+    else
+        apt-get install -y redis-server
+    fi
+    systemctl start redis 2>/dev/null || true
+    systemctl enable redis 2>/dev/null || true
+}
+
+# 自动安装 Nginx
+install_nginx() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y nginx
+    else
+        apt-get install -y nginx
+    fi
+    systemctl start nginx
+    systemctl enable nginx
+}
+
+# 自动安装 Supervisor
+install_supervisor() {
+    if [ "$OS" == "centos" ] || [ "$OS" == "rhel" ]; then
+        yum install -y supervisor
+    else
+        apt-get install -y supervisor
+    fi
+    systemctl start supervisord 2>/dev/null || systemctl start supervisor 2>/dev/null
+    systemctl enable supervisord 2>/dev/null || systemctl enable supervisor 2>/dev/null
+}
+
 show_success() {
     local port=$1
     local domain=$2
