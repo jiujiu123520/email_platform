@@ -191,7 +191,11 @@ EOF
     info "使用: $COMPOSE_CMD"
     $COMPOSE_CMD down 2>/dev/null || true
     info "构建镜像（首次约 5-10 分钟）..."
-    $COMPOSE_CMD up -d --build --no-cache
+    if [ "$COMPOSE_CMD" = "docker compose" ]; then
+        $COMPOSE_CMD up -d --build
+    else
+        $COMPOSE_CMD up -d --build --no-cache
+    fi
 
     # 等待 MySQL
     info "等待 MySQL 启动..."

@@ -186,7 +186,11 @@ EOF
     info "Using: $COMPOSE_CMD"
     $COMPOSE_CMD down 2>/dev/null || true
     info "Building images (first run ~5-10 min)..."
-    $COMPOSE_CMD up -d --build --no-cache
+    if [ "$COMPOSE_CMD" = "docker compose" ]; then
+        $COMPOSE_CMD up -d --build
+    else
+        $COMPOSE_CMD up -d --build --no-cache
+    fi
 
     # Wait for MySQL
     info "Waiting for MySQL..."
