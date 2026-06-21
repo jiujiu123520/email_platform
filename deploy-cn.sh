@@ -43,6 +43,34 @@ check_docker() {
     return 0
 }
 
+# 下载文件（多代理回退）
+download_file() {
+    local url="$1"
+    local output="$2"
+    local timeout="${3:-10}"
+
+    local urls=(
+        "https://gh.jasonzeng.dev/${url}"
+        "https://ghproxy.com/${url}"
+        "https://mirror.ghproxy.com/${url}"
+        "https://kgithub.com/${url}"
+        "https://gitclone.com/github.com/${url}"
+        "https://ghp.ci/https://github.com/${url}"
+        "https://${url}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "下载: $u"
+        if curl -fsSL --connect-timeout "$timeout" --max-time 120 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "下载成功"
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
 # ============================================================
 # 安装 Docker（内部函数）
 # ============================================================
@@ -162,10 +190,11 @@ do_install() {
     mkdir -p "$PROJECT_DIR"
     cd /tmp
     rm -rf email_platform.zip email_platform-main
-    curl -fsSL -o email_platform.zip \
-        "https://gh.jasonzeng.dev/https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip" || \
-    curl -fsSL -o email_platform.zip \
-        "https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip"
+
+    info "正在下载项目源码..."
+    download_file "github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip" "/tmp/email_platform.zip" || \
+        error "源码下载失败，请检查网络连接"
+
     unzip -o -q email_platform.zip
     rm -rf "${PROJECT_DIR:?}"/*
     cp -a email_platform-main/. "$PROJECT_DIR/"

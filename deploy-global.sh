@@ -43,6 +43,32 @@ check_docker() {
     return 0
 }
 
+# Download with proxy fallbacks (works globally)
+download_file() {
+    local url="$1"
+    local output="$2"
+    local timeout="${3:-10}"
+
+    local urls=(
+        "https://github.com/${url}"
+        "https://ghproxy.com/${url}"
+        "https://mirror.ghproxy.com/${url}"
+        "https://kgithub.com/${url}"
+        "https://gitclone.com/github.com/${url}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "Downloading: $u"
+        if curl -fsSL --connect-timeout "$timeout" --max-time 120 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "Downloaded"
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
 # ============================================================
 # Internal: Install Docker
 # ============================================================
@@ -151,8 +177,11 @@ do_install() {
     mkdir -p "$PROJECT_DIR"
     cd /tmp
     rm -rf email_platform.zip email_platform-main
-    curl -fsSL -o email_platform.zip \
-        "https://github.com/jiujiu123520/email_platform/archive/refs/heads/main.zip"
+
+    info "Downloading project source..."
+    download_file "jiujiu123520/email_platform/archive/refs/heads/main.zip" "/tmp/email_platform.zip" || \
+        error "Download failed, check network"
+
     unzip -o -q email_platform.zip
     rm -rf "${PROJECT_DIR:?}"/*
     cp -a email_platform-main/. "$PROJECT_DIR/"
@@ -164,9 +193,6 @@ do_install() {
 
     # Replace DaoCloud mirrors with Docker Hub
     sed -i 's|docker\.m\.daocloud\.io|docker.io|g' docker-compose.yml
-    sed -i 's|https://mirror\.baidubce\.com||g' docker-compose.yml
-    sed -i 's|https://hub-mirror\.c\.163\.com||g' docker-compose.yml
-    sed -i 's|https://docker\.mirrors\.ustc\.edu\.cn||g' docker-compose.yml
 
     success "Source ready"
 
