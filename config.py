@@ -89,3 +89,6 @@ config = {
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
+
+# 兼容旧代码导入
+Config = BaseConfig
