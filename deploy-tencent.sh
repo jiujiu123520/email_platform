@@ -190,6 +190,7 @@ REDIS_URL=redis://localhost:6379/0
 FLASK_ENV=production
 EOF
 
+    mkdir -p /etc/nginx/conf.d
     cat > /etc/nginx/conf.d/email_platform.conf << 'NGINXEOF'
 upstream email_backend {
     server 127.0.0.1:5200;
@@ -304,8 +305,8 @@ uninstall() {
     rm -f /etc/supervisord.d/email_platform.ini
     supervisorctl reread 2>/dev/null
     supervisorctl update 2>/dev/null
-    rm -f /etc/nginx/conf.d/email_platform.conf
-    nginx -t 2>/dev/null && systemctl reload nginx || true
+    rm -f /etc/nginx/conf.d/email_platform.conf 2>/dev/null || true
+    nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || true
     success "服务已停止"
 
     step "2/3  删除项目目录"
