@@ -1,6 +1,6 @@
 """
 用户模型 - 模块二：用户管理与风控
-支持多用户权限系统，软删除，登录风控
+支持多用户权限系统，软删除，登录风控，QQ号绑定
 """
 from datetime import datetime
 from app.models.database import db
@@ -18,6 +18,8 @@ class User(db.Model):
     display_name = db.Column(db.String(100), default='')
     avatar = db.Column(db.String(255), default='')
     phone = db.Column(db.String(20), default='')
+    qq_number = db.Column(db.String(20), default='', index=True)  # QQ号
+    qq_avatar = db.Column(db.String(500), default='')  # QQ头像URL
     role = db.Column(db.Enum('super_admin', 'admin', 'user'), default='user', nullable=False)
     status = db.Column(db.Enum('active', 'locked', 'disabled'), default='active', nullable=False)
     is_deleted = db.Column(db.Boolean, default=False, index=True)
@@ -77,6 +79,14 @@ class User(db.Model):
         self.reset_daily_quota()
         self.used_quota_today += count
 
+    def get_avatar_url(self):
+        """获取头像URL，优先使用QQ头像"""
+        if self.qq_avatar:
+            return self.qq_avatar
+        if self.avatar:
+            return self.avatar
+        return ''
+
     def to_dict(self, include_sensitive=False):
         """序列化为字典"""
         data = {
@@ -84,8 +94,10 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'display_name': self.display_name,
-            'avatar': self.avatar,
+            'avatar': self.get_avatar_url(),
             'phone': self.phone,
+            'qq_number': self.qq_number,
+            'qq_avatar': self.qq_avatar,
             'role': self.role,
             'status': self.status,
             'daily_quota': self.daily_quota,
