@@ -4,10 +4,11 @@
 # ============================================================
 FROM python:3.9-slim
 
-# 使用国内 apt 源
-RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
-    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
-    sed -i 's/security.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+# 使用国内 apt 源（兼容 Debian 12 新格式）
+RUN rm -f /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
+    echo 'deb http://mirrors.ustc.edu.cn/debian trixie main' > /etc/apt/sources.list && \
+    echo 'deb http://mirrors.ustc.edu.cn/debian trixie-updates main' >> /etc/apt/sources.list && \
+    echo 'deb http://mirrors.ustc.edu.cn/debian-security trixie-security main' >> /etc/apt/sources.list
 
 # 设置工作目录
 WORKDIR /app
