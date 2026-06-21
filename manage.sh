@@ -13,37 +13,6 @@ success() { echo -e "${GREEN}✔${NC} $1"; }
 warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 error()   { echo -e "${RED}✖${NC} $1"; exit 1; }
 
-show_banner() {
-    clear 2>/dev/null || true
-    echo -e "${CYAN}${BOLD}"
-    echo "╔══════════════════════════════════════════╗"
-    echo "║     邮件发送平台 - 一键管理脚本         ║"
-    echo "╚══════════════════════════════════════════╝"
-    echo -e "${NC}"
-}
-
-show_banner
-echo ""
-echo "  请选择操作："
-echo ""
-echo "    ${GREEN}1) 安装 - Docker 部署（推荐）${NC}"
-echo "    ${GREEN}2) 安装 - 普通部署（无 Docker）${NC}"
-echo "    ${RED}3) 卸载 - Docker 部署${NC}"
-echo "    ${RED}4) 卸载 - 普通部署${NC}"
-echo "    ${YELLOW}0) 退出${NC}"
-echo ""
-read -p "  请输入选项 (0-4) [默认: 1]: " choice
-choice=${choice:-1}
-
-case $choice in
-    1) install_docker ;;
-    2) install_normal ;;
-    3) uninstall_docker ;;
-    4) uninstall_normal ;;
-    0) echo "已退出"; exit 0 ;;
-    *) error "无效选项" ;;
-esac
-
 # ============================================================
 # Docker 安装
 # ============================================================
@@ -624,3 +593,37 @@ show_uninstall() {
     echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${NC}"
     echo ""
 }
+
+# ============================================================
+# 主菜单
+# ============================================================
+show_banner() {
+    clear 2>/dev/null || true
+    echo -e "${CYAN}${BOLD}"
+    echo "╔══════════════════════════════════════════╗"
+    echo "║     邮件发送平台 - 一键管理脚本         ║"
+    echo "╚══════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+show_banner
+echo ""
+echo "  请选择操作："
+echo ""
+echo "    ${GREEN}1) 安装 - Docker 部署（推荐）${NC}"
+echo "    ${GREEN}2) 安装 - 普通部署（无 Docker）${NC}"
+echo "    ${RED}3) 卸载 - Docker 部署${NC}"
+echo "    ${RED}4) 卸载 - 普通部署${NC}"
+echo "    ${YELLOW}0) 退出${NC}"
+echo ""
+read -p "  请输入选项 (0-4) [默认: 1]: " choice
+choice=${choice:-1}
+
+case $choice in
+    1) install_docker ;;
+    2) install_normal ;;
+    3) uninstall_docker ;;
+    4) uninstall_normal ;;
+    0) echo "已退出"; exit 0 ;;
+    *) error "无效选项" ;;
+esac
