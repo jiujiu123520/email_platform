@@ -1,7 +1,13 @@
 # ============================================================
 # 邮件发送平台 - Dockerfile
+# 使用国内 apt 源加速构建
 # ============================================================
 FROM python:3.9-slim
+
+# 使用国内 apt 源
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
+    sed -i 's/security.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
 
 # 设置工作目录
 WORKDIR /app
@@ -15,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 
 # 复制项目文件
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 复制源码
 COPY . .
