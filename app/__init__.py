@@ -1,7 +1,5 @@
 """
 邮件发送平台 - 应用包初始化
-导出 create_app 和 init_db 供 WSGI 使用
 """
-from app.app import create_app, init_db
-
-__all__ = ['create_app', 'init_db']
+# 这个文件故意留空以避免循环导入
+# 实际使用请直接 from app.app import create_app, init_db
