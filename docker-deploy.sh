@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# 邮件发送平台 - Docker 一键部署脚本 (CentOS 7 兼容版)
-# 修复 docker-compose 段错误和镜像拉取超时
+# 邮件发送平台 - Docker 一键部署脚本 (CentOS 7 国内镜像版)
+# 使用阿里云镜像，无需访问 Docker Hub
 # ============================================================
 
 set -e
@@ -22,7 +22,7 @@ if ! command -v docker &> /dev/null; then
     error "Docker 未安装，请先安装 Docker"
 fi
 
-# 修复 docker-compose：删除损坏的二进制文件，使用 pip 安装
+# 修复 docker-compose
 info "检查并修复 docker-compose..."
 if command -v docker-compose &>/dev/null; then
     if ! docker-compose version &>/dev/null; then
@@ -39,24 +39,6 @@ if ! docker-compose version &>/dev/null; then
     error "docker-compose 安装失败，请手动安装"
 fi
 success "docker-compose 可用"
-
-# 设置国内镜像加速
-info "配置 Docker 国内镜像加速..."
-mkdir -p /etc/docker
-cat > /etc/docker/daemon.json << 'EOF'
-{
-  "registry-mirrors": [
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com",
-    "https://mirror.baidubce.com",
-    "https://ccr.ccs.tencentyun.com",
-    "https://docker.m.daocloud.io"
-  ]
-}
-EOF
-systemctl restart docker
-sleep 3
-success "Docker 镜像加速配置完成"
 
 # 克隆项目
 info "获取项目源码..."
@@ -81,29 +63,14 @@ SECRET_KEY=${SECRET_KEY}
 JWT_SECRET_KEY=${JWT_SECRET_KEY}
 EOF
 
-# 预拉取镜像（带重试）
-info "预拉取 Docker 镜像..."
-for img in mysql:8.0 redis:7-alpine nginx:alpine python:3.9-slim; do
-    for i in 1 2 3; do
-        info "拉取 $img (尝试 $i/3)..."
-        if docker pull $img; then
-            success "$img 拉取成功"
-            break
-        else
-            warn "$img 拉取失败，重试..."
-            sleep 5
-        fi
-    done
-done
-
-# 启动服务
+# 启动服务（使用国内镜像，无需预拉取）
 info "启动 Docker 服务..."
 docker-compose down 2>/dev/null || true
 docker-compose up -d --build
 
 # 等待 MySQL 启动
 info "等待数据库启动..."
-sleep 20
+sleep 25
 
 # 初始化数据库
 info "初始化数据库..."

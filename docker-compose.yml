@@ -1,13 +1,13 @@
 # ============================================================
-# 邮件发送平台 - Docker Compose 配置
-# 包含: Flask应用 + MySQL + Redis + Nginx
+# 邮件发送平台 - Docker Compose 配置 (国内镜像版)
+# 使用阿里云/腾讯云/DaoCloud 镜像，无需访问 Docker Hub
 # ============================================================
 version: '3.8'
 
 services:
   # MySQL 数据库
   mysql:
-    image: mysql:8.0
+    image: registry.cn-hangzhou.aliyuncs.com/acs-sample/mysql:8.0
     container_name: email_platform_mysql
     restart: always
     environment:
@@ -25,7 +25,7 @@ services:
 
   # Redis 缓存
   redis:
-    image: redis:7-alpine
+    image: registry.cn-hangzhou.aliyuncs.com/acs-sample/redis:7-alpine
     container_name: email_platform_redis
     restart: always
     command: redis-server --requirepass EmailPlatformRedis2024!
@@ -60,7 +60,7 @@ services:
 
   # Nginx 反向代理
   nginx:
-    image: nginx:alpine
+    image: registry.cn-hangzhou.aliyuncs.com/acs-sample/nginx:alpine
     container_name: email_platform_nginx
     restart: always
     ports:
