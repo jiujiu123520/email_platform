@@ -178,6 +178,36 @@ def reset_relay_health(relay_id):
     return error_response(message, 404)
 
 
+@relay_bp.route('/port-presets', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_port_presets():
+    """获取SMTP端口预设配置"""
+    presets = SmtpRelay.get_port_presets()
+    result = []
+    for port, config in presets.items():
+        result.append({
+            'port': port,
+            'name': config['name'],
+            'description': config['desc'],
+            'use_ssl': config['ssl'],
+            'use_tls': config['tls']
+        })
+    return success_response(result)
+
+
+@relay_bp.route('/port-suggestion/<int:port>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_port_suggestion(port):
+    """根据端口获取建议配置"""
+    suggestion = SmtpRelay.get_port_suggestion(port)
+    return success_response({
+        'port': port,
+        **suggestion
+    })
+
+
 @relay_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 @admin_required

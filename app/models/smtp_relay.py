@@ -1,6 +1,6 @@
 """
 SMTP智能中继模型 - 模块六：SMTP智能中继管理
-支持负载均衡、自动切换、健康自检、流量控制
+支持负载均衡、自动切换、健康自检、流量控制、多端口支持
 """
 from datetime import datetime, date
 from app.models.database import db
@@ -48,6 +48,19 @@ class SmtpRelay(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # 常用SMTP端口配置建议
+    PORT_PRESETS = {
+        25: {'name': 'SMTP (25)', 'ssl': False, 'tls': False, 'desc': '标准SMTP端口，无加密'},
+        109: {'name': 'POP2 (109)', 'ssl': False, 'tls': False, 'desc': 'POP2协议端口'},
+        110: {'name': 'POP3 (110)', 'ssl': False, 'tls': False, 'desc': 'POP3协议端口'},
+        143: {'name': 'IMAP (143)', 'ssl': False, 'tls': False, 'desc': 'IMAP协议端口'},
+        465: {'name': 'SMTPS (465)', 'ssl': True, 'tls': False, 'desc': 'SSL加密SMTP'},
+        587: {'name': 'SMTP-TLS (587)', 'ssl': False, 'tls': True, 'desc': 'TLS加密SMTP（推荐）'},
+        995: {'name': 'POP3S (995)', 'ssl': True, 'tls': False, 'desc': 'SSL加密POP3'},
+        993: {'name': 'IMAPS (993)', 'ssl': True, 'tls': False, 'desc': 'SSL加密IMAP'},
+        994: {'name': 'IMAPS旧 (994)', 'ssl': True, 'tls': False, 'desc': '旧版IMAPS端口'},
+    }
+
     def reset_daily_stats(self):
         """重置每日统计"""
         today = date.today()
@@ -65,6 +78,21 @@ class SmtpRelay(db.Model):
         if self.total_sent == 0:
             return 0.0
         return round(self.total_success / self.total_sent * 100, 2)
+
+    @classmethod
+    def get_port_presets(cls):
+        """获取端口预设配置"""
+        return cls.PORT_PRESETS
+
+    @classmethod
+    def get_port_suggestion(cls, port):
+        """根据端口获取建议配置"""
+        preset = cls.PORT_PRESETS.get(port, {})
+        return {
+            'use_ssl': preset.get('ssl', False),
+            'use_tls': preset.get('tls', False),
+            'description': preset.get('desc', '')
+        }
 
     def to_dict(self, include_password=False):
         data = {

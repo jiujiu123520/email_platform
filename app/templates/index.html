@@ -941,12 +941,35 @@
         if (res) { closeModal(); alert(res.message); loadTemplates(); }
     }
 
-    function showCreateRelay() {
+    async function showCreateRelay() {
+        // 获取端口预设
+        const presetRes = await api('GET', '/relays/port-presets');
+        let portOptions = '<option value="">自定义端口</option>';
+        if (presetRes && presetRes.data) {
+            presetRes.data.forEach(p => {
+                portOptions += `<option value="${p.port}" data-ssl="${p.use_ssl}" data-tls="${p.use_tls}">${p.name} - ${p.description}</option>`;
+            });
+        }
+
         showModal(`
             <h2>添加SMTP中继</h2>
             <div class="form-group"><label>名称</label><input type="text" id="relayName"></div>
             <div class="form-group"><label>主机地址</label><input type="text" id="relayHost"></div>
-            <div class="form-group"><label>端口</label><input type="number" id="relayPort" value="587"></div>
+            <div class="form-group">
+                <label>端口选择</label>
+                <select id="relayPortSelect" onchange="onPortChange()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+                    ${portOptions}
+                </select>
+            </div>
+            <div class="form-group"><label>自定义端口</label><input type="number" id="relayPort" value="587" placeholder="输入端口号"></div>
+            <div class="form-group">
+                <label>加密方式</label>
+                <select id="relayEncrypt" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+                    <option value="tls">STARTTLS (推荐)</option>
+                    <option value="ssl">SSL/TLS</option>
+                    <option value="none">无加密</option>
+                </select>
+            </div>
             <div class="form-group"><label>用户名</label><input type="text" id="relayUser"></div>
             <div class="form-group"><label>密码</label><input type="password" id="relayPass"></div>
             <div class="form-group"><label>权重</label><input type="number" id="relayWeight" value="10"></div>
@@ -958,13 +981,32 @@
         `);
     }
 
+    function onPortChange() {
+        const select = document.getElementById('relayPortSelect');
+        const portInput = document.getElementById('relayPort');
+        const encryptSelect = document.getElementById('relayEncrypt');
+        const option = select.options[select.selectedIndex];
+
+        if (option.value) {
+            portInput.value = option.value;
+            const ssl = option.getAttribute('data-ssl') === 'true';
+            const tls = option.getAttribute('data-tls') === 'true';
+            if (ssl) encryptSelect.value = 'ssl';
+            else if (tls) encryptSelect.value = 'tls';
+            else encryptSelect.value = 'none';
+        }
+    }
+
     async function createRelay() {
+        const encrypt = document.getElementById('relayEncrypt').value;
         const res = await api('POST', '/relays', {
             name: document.getElementById('relayName').value,
             host: document.getElementById('relayHost').value,
             port: parseInt(document.getElementById('relayPort').value),
             username: document.getElementById('relayUser').value,
             password: document.getElementById('relayPass').value,
+            use_ssl: encrypt === 'ssl',
+            use_tls: encrypt === 'tls',
             weight: parseInt(document.getElementById('relayWeight').value),
             daily_quota: parseInt(document.getElementById('relayQuota').value),
         });
