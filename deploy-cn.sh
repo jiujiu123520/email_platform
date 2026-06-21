@@ -51,12 +51,12 @@ download_file() {
 
     local urls=(
         "https://gh.jasonzeng.dev/${url}"
-        "https://ghproxy.com/${url}"
-        "https://mirror.ghproxy.com/${url}"
+        "https://ghproxy.com/https://raw.githubusercontent.com/${url}"
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/${url}"
         "https://kgithub.com/${url}"
         "https://gitclone.com/github.com/${url}"
         "https://ghp.ci/https://github.com/${url}"
-        "https://${url}"
+        "https://raw.githubusercontent.com/${url}"
     )
 
     for u in "${urls[@]}"; do
@@ -69,6 +69,31 @@ download_file() {
         fi
     done
     return 1
+}
+
+# 下载脚本自身（支持 raw.githubusercontent.com 访问受限的环境）
+download_script() {
+    local script_name="$1"
+    local output="$2"
+
+    local urls=(
+        "https://ghproxy.com/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://gh.jasonzeng.dev/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://kgithub.com/jiujiu123520/email_platform/raw/main/${script_name}"
+        "https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "下载: $u"
+        if curl -fsSL --connect-timeout 15 --max-time 60 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "下载成功"
+                return 0
+            fi
+        fi
+    done
+    error "脚本下载失败，请检查网络"
 }
 
 # ============================================================

@@ -51,8 +51,8 @@ download_file() {
 
     local urls=(
         "https://github.com/${url}"
-        "https://ghproxy.com/${url}"
-        "https://mirror.ghproxy.com/${url}"
+        "https://ghproxy.com/https://github.com/${url}"
+        "https://mirror.ghproxy.com/https://github.com/${url}"
         "https://kgithub.com/${url}"
         "https://gitclone.com/github.com/${url}"
     )
@@ -67,6 +67,29 @@ download_file() {
         fi
     done
     return 1
+}
+
+# Download script with proxy support
+download_script() {
+    local script_name="$1"
+    local output="$2"
+
+    local urls=(
+        "https://ghproxy.com/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "Downloading: $u"
+        if curl -fsSL --connect-timeout 15 --max-time 60 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "Downloaded"
+                return 0
+            fi
+        fi
+    done
+    error "Script download failed"
 }
 
 # ============================================================
