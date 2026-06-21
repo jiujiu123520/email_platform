@@ -1,5 +1,6 @@
 """
 邮件发送平台 - 配置文件
+支持高并发无限发送模式
 """
 import os
 from datetime import timedelta
@@ -21,13 +22,13 @@ class BaseConfig:
 
     # API签名配置
     API_SIGN_EXPIRE_SECONDS = 300  # 5分钟过期
-    API_RATE_LIMIT = '100 per hour'  # API限流
+    API_RATE_LIMIT = '1000 per hour'  # API限流（高并发模式）
 
     # SMTP中继配置
     SMTP_RELAY_MAX_FAIL_COUNT = 3      # 连续失败3次自动切换
     SMTP_RELAY_PAUSE_COUNT = 5         # 连续失败5次自动暂停
-    SMTP_RELAY_DAILY_QUOTA = 10000     # 每日配额
-    SMTP_RELAY_CONCURRENT_LIMIT = 50   # 并发限制
+    SMTP_RELAY_DAILY_QUOTA = 100000    # 每日配额（高并发模式）
+    SMTP_RELAY_CONCURRENT_LIMIT = 200  # 并发限制（高并发模式）
 
     # 安全配置
     LOGIN_FAIL_LOCK_COUNT = 5          # 登录失败5次锁定
@@ -37,6 +38,13 @@ class BaseConfig:
     # 主题配置
     THEME_LIGHT_START_HOUR = 7         # 亮色主题开始时间
     THEME_LIGHT_END_HOUR = 19          # 亮色主题结束时间
+
+    # 无限发送模式配置
+    UNLIMITED_MODE = os.environ.get('UNLIMITED_MODE', 'false').lower() == 'true'
+    SEND_DELAY_MIN = 0.5               # 最小发送间隔（秒）
+    SEND_DELAY_MAX = 3.0               # 最大发送间隔（秒）
+    AUTO_ROTATE_IP = False             # 自动轮换IP
+    PROXY_POOL_URL = ''                # 代理池地址
 
 
 class DevelopmentConfig(BaseConfig):
@@ -56,6 +64,17 @@ class ProductionConfig(BaseConfig):
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
+class UnlimitedConfig(ProductionConfig):
+    """无限发送模式配置"""
+    UNLIMITED_MODE = True
+    SMTP_RELAY_DAILY_QUOTA = 999999    # 无限配额
+    SMTP_RELAY_CONCURRENT_LIMIT = 500  # 高并发
+    API_RATE_LIMIT = '10000 per hour'  # 高限流
+    SEND_DELAY_MIN = 0.1               # 最小延迟
+    SEND_DELAY_MAX = 1.0               # 最大延迟
+    AUTO_ROTATE_IP = True              # 启用IP轮换
+
+
 class TestingConfig(BaseConfig):
     """测试环境配置"""
     TESTING = True
@@ -66,6 +85,7 @@ class TestingConfig(BaseConfig):
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'unlimited': UnlimitedConfig,      # 无限发送模式
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
