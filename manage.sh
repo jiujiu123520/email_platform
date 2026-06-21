@@ -13,6 +13,17 @@ success() { echo -e "${GREEN}✔${NC} $1"; }
 warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 error()   { echo -e "${RED}✖${NC} $1"; exit 1; }
 
+# 自动检测 compose 命令（兼容 docker compose 插件版与 $COMPOSE_CMD 独立版）
+detect_compose() {
+    if docker compose version &>/dev/null; then
+        echo "docker compose"
+    elif command -v $COMPOSE_CMD &>/dev/null; then
+        echo "$COMPOSE_CMD"
+    else
+        echo ""
+    fi
+}
+
 # ============================================================
 # Docker 安装
 # ============================================================
@@ -42,19 +53,29 @@ install_docker() {
     fi
     success "Docker 可用"
 
-    # 修复/安装 docker-compose
-    info "检查 docker-compose..."
-    if command -v docker-compose &>/dev/null; then
-        if ! docker-compose version &>/dev/null; then
-            warn "docker-compose 损坏，重新安装..."
-            rm -f $(which docker-compose) 2>/dev/null || true
-            pip3 install docker-compose 2>/dev/null || pip install docker-compose
+    # 检查/安装 docker compose（兼容插件版与独立版）
+    info "检查 Docker Compose..."
+    COMPOSE_CMD="$(detect_compose)"
+
+    if [ -z "$COMPOSE_CMD" ]; then
+        info "Compose 未安装，尝试安装 $COMPOSE_CMD-plugin..."
+        if command -v apt-get &>/dev/null; then
+            apt-get install -y $COMPOSE_CMD-plugin >/dev/null 2>&1 || true
+        elif command -v yum &>/dev/null; then
+            yum install -y $COMPOSE_CMD-plugin >/dev/null 2>&1 || true
         fi
+
+        COMPOSE_CMD="$(detect_compose)"
+        if [ -z "$COMPOSE_CMD" ]; then
+            info "回退安装 $COMPOSE_CMD（pip 方式）..."
+            pip3 install $COMPOSE_CMD >/dev/null 2>&1 || pip install $COMPOSE_CMD >/dev/null 2>&1 || true
+            COMPOSE_CMD="$(detect_compose)"
+        fi
+        [ -z "$COMPOSE_CMD" ] && error "Docker Compose 安装失败，请手动安装后重试"
+        success "Compose 安装完成 ($COMPOSE_CMD)"
     else
-        info "安装 docker-compose..."
-        pip3 install docker-compose 2>/dev/null || pip install docker-compose
+        success "Compose 已就绪 ($COMPOSE_CMD)"
     fi
-    success "docker-compose 可用"
 
     # 配置国内镜像加速（如果未配置）
     if [ ! -f /etc/docker/daemon.json ]; then
@@ -131,8 +152,8 @@ EOF
 
     # 启动服务
     info "启动 Docker 服务（首次启动可能需要几分钟构建）..."
-    docker-compose down 2>/dev/null || true
-    docker-compose up -d --build --no-cache
+    $COMPOSE_CMD down 2>/dev/null || true
+    $COMPOSE_CMD up -d --build --no-cache
 
     # 等待 MySQL 启动
     info "等待数据库启动..."
@@ -140,7 +161,7 @@ EOF
 
     # 初始化数据库
     info "初始化数据库..."
-    docker-compose exec -T app python3 -c "
+    $COMPOSE_CMD exec -T app python3 -c "
 from app.app import create_app, init_db
 app = create_app('production')
 with app.app_context():
@@ -152,15 +173,15 @@ print('数据库初始化完成')
     if [ "$ENABLE_SSL" = "true" ] && [ -n "$DOMAIN" ]; then
         info "申请 SSL 证书..."
         sleep 5
-        docker-compose run --rm certbot certonly \
+        $COMPOSE_CMD run --rm certbot certonly \
             --webroot --webroot-path /var/www/certbot \
             --email admin@${DOMAIN} --agree-tos --no-eff-email \
             -d ${DOMAIN} || warn "SSL 证书申请失败，请检查域名解析"
-        docker-compose restart nginx
+        $COMPOSE_CMD restart nginx
     fi
 
     info "服务状态:"
-    docker-compose ps
+    $COMPOSE_CMD ps
 
     show_success "$NGINX_PORT" "$DOMAIN" "$ENABLE_SSL"
 }
@@ -186,9 +207,11 @@ uninstall_docker() {
     PROJECT_DIR="/opt/email_platform"
 
     info "停止并删除容器..."
+    COMPOSE_CMD="$(detect_compose)"
+    COMPOSE_CMD="${COMPOSE_CMD:-docker compose}"
     if [ -f "$PROJECT_DIR/docker-compose.yml" ]; then
         cd "$PROJECT_DIR"
-        docker-compose down 2>/dev/null || true
+        $COMPOSE_CMD down 2>/dev/null || true
     else
         docker stop email_platform_app email_platform_mysql email_platform_redis email_platform_nginx email_platform_certbot 2>/dev/null || true
         docker rm -f email_platform_app email_platform_mysql email_platform_redis email_platform_nginx email_platform_certbot 2>/dev/null || true
@@ -196,7 +219,7 @@ uninstall_docker() {
 
     if [[ "$del_vol" =~ ^[Yy]$ ]]; then
         info "删除数据卷..."
-        [ -f "$PROJECT_DIR/docker-compose.yml" ] && (cd "$PROJECT_DIR" && docker-compose down -v 2>/dev/null) || true
+        [ -f "$PROJECT_DIR/docker-compose.yml" ] && (cd "$PROJECT_DIR" && $COMPOSE_CMD down -v 2>/dev/null) || true
         docker volume rm email_platform_mysql_data email_platform_redis_data 2>/dev/null || true
     fi
 
@@ -224,7 +247,7 @@ uninstall_docker() {
             if [ "$ID" == "centos" ] || [ "$ID" == "rhel" ]; then
                 yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2>/dev/null || true
             else
-                apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 2>/dev/null || true
+                apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin $COMPOSE_CMD-plugin 2>/dev/null || true
                 apt-get autoremove -y 2>/dev/null || true
             fi
         fi
