@@ -232,6 +232,8 @@ except Exception as e:
     print(f'数据库初始化: {e}')
 PYEOF
 
+    # 配置并启动Supervisor
+    mkdir -p /etc/supervisord.d
     cat > /etc/supervisord.d/email_platform.ini << 'SUPERVISOREOF'
 [program:email_platform]
 command=/opt/email_platform/venv/bin/gunicorn --workers 2 --bind 0.0.0.0:5200 --timeout 120 wsgi:app
@@ -244,17 +246,27 @@ stdout_logfile=/var/log/email_platform.out.log
 environment=PATH="/opt/email_platform/venv/bin"
 SUPERVISOREOF
 
-    supervisord 2>/dev/null || true
-    supervisorctl reread 2>/dev/null || true
-    supervisorctl update 2>/dev/null || true
-    supervisorctl restart email_platform 2>/dev/null || true
+    # 确保supervisor配置文件存在并启动
+    if [ ! -f /etc/supervisord.conf ]; then
+        echo -e "[supervisord]\nlogfile=/var/log/supervisord.log\npidfile=/var/run/supervisord.pid\nchildlogdir=/var/log" > /etc/supervisord.conf
+    fi
+    if ! grep -q "supervisord.d" /etc/supervisord.conf 2>/dev/null; then
+        echo -e "\n[include]\nfiles = /etc/supervisord.d/*.ini" >> /etc/supervisord.conf
+    fi
+
+    # 启动supervisord
+    supervisord -c /etc/supervisord.conf 2>/dev/null || true
+    sleep 2
+    supervisorctl -c /etc/supervisord.conf reread 2>/dev/null || true
+    supervisorctl -c /etc/supervisord.conf update 2>/dev/null || true
+    supervisorctl -c /etc/supervisord.conf restart email_platform 2>/dev/null || true
 
     sleep 3
 
-    if supervisorctl status email_platform 2>/dev/null | grep -q "RUNNING"; then
+    if supervisorctl -c /etc/supervisord.conf status email_platform 2>/dev/null | grep -q "RUNNING"; then
         success "应用已启动"
     else
-        warn "应用可能未正常启动，请检查日志: supervisorctl status"
+        warn "应用可能未正常启动，请检查日志: supervisorctl -c /etc/supervisord.conf status email_platform"
     fi
 
     SERVER_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || \
@@ -300,11 +312,11 @@ uninstall() {
     [[ ! "$confirm" =~ ^[Yy]$ ]] && info "已取消" && exit 0
 
     step "1/3  停止服务"
-    supervisorctl stop email_platform 2>/dev/null || true
-    supervisorctl remove email_platform 2>/dev/null || true
+    supervisorctl -c /etc/supervisord.conf stop email_platform 2>/dev/null || true
+    supervisorctl -c /etc/supervisord.conf remove email_platform 2>/dev/null || true
     rm -f /etc/supervisord.d/email_platform.ini
-    supervisorctl reread 2>/dev/null
-    supervisorctl update 2>/dev/null
+    supervisorctl -c /etc/supervisord.conf reread 2>/dev/null
+    supervisorctl -c /etc/supervisord.conf update 2>/dev/null
     rm -f /etc/nginx/conf.d/email_platform.conf 2>/dev/null || true
     nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || true
     success "服务已停止"
@@ -332,14 +344,14 @@ case "${1:-install}" in
         uninstall
         ;;
     restart|r)
-        supervisorctl restart email_platform 2>/dev/null
+        supervisorctl -c /etc/supervisord.conf restart email_platform 2>/dev/null
         echo "服务已重启"
         ;;
     status|s)
-        supervisorctl status email_platform
+        supervisorctl -c /etc/supervisord.conf status email_platform
         ;;
     logs|l)
-        supervisorctl logs -f email_platform
+        supervisorctl -c /etc/supervisord.conf logs -f email_platform
         ;;
     help|h|-h|--help)
         echo ""

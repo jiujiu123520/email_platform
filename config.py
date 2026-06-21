@@ -60,7 +60,10 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     """生产环境配置"""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'DATABASE_URL',
+        'mysql+pymysql://email_user:EmailPlatform2024!@localhost:3306/email_platform?charset=utf8mb4'
+    )
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
