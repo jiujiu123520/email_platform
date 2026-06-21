@@ -8,7 +8,7 @@ from app.models.email_record import EmailRecord, EmailBatch
 from app.models.database import db
 from app.middleware.auth import get_current_user
 from app.utils.helpers import success_response, error_response, paginate_response, get_request_info
-from app.services.email_service import EmailSendService
+from app.services.email_service import EmailService
 from app.models.audit_log import AuditLog
 
 email_bp = Blueprint('email', __name__, url_prefix='/api/v2/email')
