@@ -255,8 +255,8 @@ install_normal() {
         error "端口必须是数字"
     fi
 
-    read -p "  数据库密码 [默认: EmailPlatform2024!]: " db_pass
-    DB_PASS=${db_pass:-EmailPlatform2024!'}
+    read -p "  数据库密码 [默认: EmailPlatform2024]: " db_pass
+    DB_PASS=${db_pass:-'EmailPlatform2024'}
 
     # 自动安装基础工具（如果未安装）
     info "检查并安装基础工具..."
