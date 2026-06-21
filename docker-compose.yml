@@ -1,13 +1,13 @@
 # ============================================================
-# 邮件发送平台 - Docker Compose 配置 (腾讯云镜像版)
-# 使用腾讯云镜像，无需访问 Docker Hub
+# 邮件发送平台 - Docker Compose 配置 (DaoCloud 公共镜像版)
+# 使用 DaoCloud 公共镜像，无需登录认证
 # ============================================================
 version: '3.8'
 
 services:
   # MySQL 数据库
   mysql:
-    image: ccr.ccs.tencentyun.com/library/mysql:8.0
+    image: docker.m.daocloud.io/library/mysql:8.0
     container_name: email_platform_mysql
     restart: always
     environment:
@@ -25,7 +25,7 @@ services:
 
   # Redis 缓存
   redis:
-    image: ccr.ccs.tencentyun.com/library/redis:7-alpine
+    image: docker.m.daocloud.io/library/redis:7-alpine
     container_name: email_platform_redis
     restart: always
     command: redis-server --requirepass EmailPlatformRedis2024!
@@ -60,7 +60,7 @@ services:
 
   # Nginx 反向代理
   nginx:
-    image: ccr.ccs.tencentyun.com/library/nginx:alpine
+    image: docker.m.daocloud.io/library/nginx:alpine
     container_name: email_platform_nginx
     restart: always
     ports:
