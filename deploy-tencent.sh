@@ -25,6 +25,57 @@ step()    { echo ""; echo -e "${CYAN}${BOLD}━━━ $1 ━━━${NC}"; }
 
 START_TIME=$(date +%s)
 
+# 下载文件（多代理回退）
+download_file() {
+    local github_file="$1"
+    local output="$2"
+
+    local urls=(
+        "https://gh.jasonzeng.dev/https://github.com/${github_file}"
+        "https://mirror.ghproxy.com/https://github.com/${github_file}"
+        "https://kgithub.com/${github_file}"
+        "https://gitclone.com/github.com/${github_file}"
+        "https://ghproxy.com/https://github.com/${github_file}"
+        "https://github.com/${github_file}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "下载: $u"
+        if curl -fsSL --connect-timeout 15 --max-time 120 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "下载成功"
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
+# 下载脚本（支持 raw.githubusercontent.com 受限环境）
+download_script() {
+    local script_name="$1"
+    local output="$2"
+
+    local urls=(
+        "https://gh.jasonzeng.dev/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+        "https://kgithub.com/jiujiu123520/email_platform/raw/main/${script_name}"
+        "https://gitclone.com/gist.github.com/jiujiu123520/email_platform/raw/main/${script_name}"
+        "https://raw.githubusercontent.com/jiujiu123520/email_platform/main/${script_name}"
+    )
+
+    for u in "${urls[@]}"; do
+        info "下载脚本: $u"
+        if curl -fsSL --connect-timeout 15 --max-time 60 -o "$output" "$u" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                success "脚本下载成功"
+                return 0
+            fi
+        fi
+    done
+    error "脚本下载失败"
+}
+
 # ============================================================
 # 主流程
 # ============================================================
@@ -41,28 +92,7 @@ main() {
     cd /tmp
 
     info "正在下载项目源码..."
-    local github_file="jiujiu123520/email_platform/archive/refs/heads/main.zip"
-
-    local urls=(
-        "https://gh.jasonzeng.dev/https://github.com/${github_file}"
-        "https://ghproxy.com/https://github.com/${github_file}"
-        "https://mirror.ghproxy.com/https://github.com/${github_file}"
-        "https://github.com/${github_file}"
-    )
-
-    local downloaded=false
-    for url in "${urls[@]}"; do
-        info "尝试下载: $url"
-        if curl -fsSL --connect-timeout 20 --max-time 120 -o /tmp/email_platform.zip "$url" 2>/dev/null; then
-            if [ -s /tmp/email_platform.zip ]; then
-                downloaded=true
-                success "下载成功"
-                break
-            fi
-        fi
-    done
-
-    if [ "$downloaded" = false ]; then
+    if ! download_file "jiujiu123520/email_platform/archive/refs/heads/main.zip" "/tmp/email_platform.zip"; then
         error "源码下载失败，请检查网络连接"
     fi
 
