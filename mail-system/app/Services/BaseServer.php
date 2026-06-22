@@ -34,6 +34,15 @@ abstract class BaseServer
         $this->logger   = new Logger();
     }
 
+    public function getPort(): int { return $this->port; }
+
+    public function getService(): string
+    {
+        $cls = get_class($this);
+        $cls = substr($cls, strrpos($cls, '\\') + 1);
+        return strtolower(str_replace('Server', '', $cls));
+    }
+
     public function start(): void
     {
         $ctx = stream_context_create();

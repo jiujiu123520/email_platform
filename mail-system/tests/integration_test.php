@@ -200,10 +200,8 @@ if ($fp) {
 
 // 9. 邮件投递测试 (SMTP -> Maildir)
 echo "\n9. 邮件投递测试 (SMTP -> Maildir)\n";
-echo "  Attempting connection to 127.0.0.1:$smtpPort...\n";
-$fp = @fsockopen('127.0.0.1', $smtpPort, $errno, $errstr, 5);
+$fp = @fsockopen('127.0.0.1', $smtpPort, $errno, $errstr, 3);
 if ($fp) {
-    echo "  ✓ Connected\n";
     fgets($fp, 1024); // banner
     fwrite($fp, "EHLO test.local\r\n");
     while (substr(fgets($fp, 1024), 3, 1) === '-') { }
@@ -219,13 +217,7 @@ if ($fp) {
     fwrite($fp, "QUIT\r\n");
     fclose($fp);
 } else {
-    echo "  ✗ Cannot connect: $errstr ($errno)\n";
-    echo "  Checking if port is listening...\n";
-    $sock = @stream_socket_client("tcp://127.0.0.1:$smtpPort", $errno, $errstr, 1);
-    if ($sock) {
-        echo "  Wait, it's actually listening now!\n";
-        fclose($sock);
-    }
+    echo "  ✗ Cannot connect: $errstr\n";
 }
 
 // Wait for delivery

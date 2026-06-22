@@ -75,9 +75,27 @@ $adminPath  = installerOpt('admin-path', 'admin');
 $adminPort  = installerOpt('admin-port', 8080);
 $mailHost   = installerOpt('mail-hostname', 'mail.local');
 $appUrl     = installerOpt('app-url', 'http://localhost');
+$domain     = installerOpt('default-domain', '');
 
 $stmt = $pdo->prepare("UPDATE ms_users SET username = ?, password = ?, email = ? WHERE username = 'admin'");
 $stmt->execute([$adminUser, password_hash($adminPass, PASSWORD_DEFAULT), $adminEmail]);
+
+// 创建默认域名
+if ($domain) {
+    $adminRow = $pdo->query("SELECT id FROM ms_users WHERE username = '$adminUser'")->fetch();
+    $adminId = $adminRow['id'] ?? 0;
+    $pdo->prepare("INSERT IGNORE INTO ms_domains (domain, owner_id, status, is_default) VALUES (?, ?, 1, 1)")
+        ->execute([$domain, $adminId]);
+
+    $dRow = $pdo->query("SELECT id FROM ms_domains WHERE domain = '$domain'")->fetch();
+    $dId = $dRow['id'] ?? 0;
+    if ($dId) {
+        // 创建默认 admin 邮箱
+        $local = explode('@', $adminEmail)[0] ?: 'admin';
+        $pdo->prepare("INSERT IGNORE INTO ms_mailboxes (user_id, domain_id, local_part, full_address, password, display_name, status) VALUES (?, ?, ?, ?, ?, ?, 1)")
+            ->execute([$adminId, $dId, $local, $adminEmail, password_hash($adminPass, PASSWORD_DEFAULT), $adminUser]);
+    }
+}
 
 // 5. 更新设置
 $pdo->prepare("UPDATE ms_settings SET `value`=? WHERE key_name='admin_path'")->execute([$adminPath]);

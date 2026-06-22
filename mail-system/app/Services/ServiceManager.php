@@ -92,12 +92,8 @@ class ServiceManager
 
     private function fork($server): void
     {
-        $ref = new \ReflectionClass($server);
-        $port = $ref->getProperty('port');
-        $port->setAccessible(true);
-        $portVal = $port->getValue($server);
-
-        $service = strtolower(str_replace('Server', '', $ref->getShortName()));
+        $portVal = $server->getPort();
+        $service = $server->getService();
         $pidFile = "{$this->pidDir}/mail-{$service}-{$portVal}.pid";
 
         $pid = pcntl_fork();
