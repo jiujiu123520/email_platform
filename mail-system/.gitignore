@@ -1,0 +1,46 @@
+# ============================================
+# MailSystem - .gitignore
+# ============================================
+
+# 配置文件
+.env
+*.local
+
+# 数据与缓存
+/data/*
+!/data/.gitkeep
+/storage/cache/*
+/storage/sessions/*
+/storage/installed.lock
+!/storage/cache/.gitkeep
+!/storage/sessions/.gitkeep
+/logs/*
+!/logs/.gitkeep
+
+# 邮件存储
+data/mailboxes/*
+data/uploads/*
+!data/mailboxes/.gitkeep
+!data/uploads/.gitkeep
+
+# PHP
+*.swp
+*.swo
+
+# 编辑器
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Node (如果未来引入构建)
+node_modules/
+dist/
+build/
+
+# 测试
+.phpunit.result.cache
+*.log

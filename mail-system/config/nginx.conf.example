@@ -1,0 +1,89 @@
+# ============================================
+# Nginx 配置示例 - MailSystem
+# 将本文件复制为 /etc/nginx/conf.d/mailsystem.conf
+# 并修改 web_root 与域名
+# ============================================
+
+# Web 主站
+server {
+    listen 80;
+    listen [::]:80;
+    server_name mail.example.com;  # 修改为你的域名
+
+    root /var/www/mailsystem/public;  # 修改为实际部署目录
+    index index.php index.html;
+
+    client_max_body_size 50M;
+
+    access_log /var/log/nginx/mailsystem-access.log;
+    error_log  /var/log/nginx/mailsystem-error.log;
+
+    # 前台
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # 后台
+    location /admin/ {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # 静态资源
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|map)$ {
+        expires 30d;
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000";
+    }
+
+    # PHP 处理
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        include fastcgi_params;
+        fastcgi_read_timeout 300;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+    }
+
+    # 安全
+    location ~ /\.(git|env) { deny all; return 404; }
+    location ~ ^/(storage|data|logs)/ { deny all; return 404; }
+    location ~ /install/ { deny all; return 404; }
+    location ~ /\.ht { deny all; }
+}
+
+# HTTPS 配置示例
+# server {
+#     listen 443 ssl http2;
+#     server_name mail.example.com;
+#
+#     ssl_certificate     /etc/ssl/certs/mail.example.com.crt;
+#     ssl_certificate_key /etc/ssl/private/mail.example.com.key;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#
+#     root /var/www/mailsystem/public;
+#     index index.php index.html;
+#     client_max_body_size 50M;
+#
+#     location / {
+#         try_files $uri $uri/ /index.php?$query_string;
+#     }
+#     location /admin/ {
+#         try_files $uri $uri/ /index.php?$query_string;
+#     }
+#     location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|map)$ {
+#         expires 30d;
+#     }
+#     location ~ \.php$ {
+#         fastcgi_pass 127.0.0.1:9000;
+#         fastcgi_index index.php;
+#         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+#         include fastcgi_params;
+#     }
+#     location ~ /\.(git|env) { deny all; }
+#     location ~ ^/(storage|data|logs)/ { deny all; }
+# }

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailSystem 管理后台</title>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; }
+#app { height: 100%; }
+
+.layout { display: flex; height: 100vh; }
+.sidebar { width: 220px; background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%); color: #fff; flex-shrink: 0; }
+.sidebar .logo { padding: 22px 20px; font-size: 18px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+.sidebar .logo i { font-size: 24px; color: #ffd700; }
+.sidebar .menu { list-style: none; padding: 12px 0; }
+.sidebar .menu li { padding: 12px 24px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-size: 14px; border-left: 3px solid transparent; }
+.sidebar .menu li:hover { background: rgba(255,255,255,0.08); }
+.sidebar .menu li.active { background: rgba(255,255,255,0.12); border-left-color: #ffd700; }
+.sidebar .menu li i { width: 18px; }
+.sidebar .menu .group { padding: 16px 24px 6px; font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.header { background: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,21,41,0.08); z-index: 10; }
+.header .title { font-size: 16px; color: #333; }
+.header .user { display: flex; align-items: center; gap: 14px; font-size: 14px; color: #666; }
+.header .user .avatar { width: 32px; height: 32px; border-radius: 50%; background: #2a5298; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+
+.content { flex: 1; padding: 20px; overflow-y: auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+.card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.card-title .actions { display: flex; gap: 8px; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,222,0.2)); border-radius: 0 0 0 100%; }
+.stat-card .label { color: #888; font-size: 13px; margin-bottom: 8px; }
+.stat-card .value { font-size: 28px; font-weight: 700; color: #333; }
+.stat-card .icon { position: absolute; right: 16px; top: 16px; font-size: 32px; color: rgba(102,126,234,0.4); }
+
+.service-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; }
+.service-row:last-child { border-bottom: none; }
+.service-info { flex: 1; }
+.service-info .name { font-weight: 600; color: #333; }
+.service-info .desc { font-size: 12px; color: #999; margin-top: 4px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-running { background: #52c41a; box-shadow: 0 0 6px rgba(82,196,26,0.5); }
+.status-stopped { background: #f5222d; }
+
+.empty { text-align: center; padding: 60px 20px; color: #999; }
+.empty i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.tag-green  { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+.tag-blue   { background: #e6f7ff; color: #096dd9; border: 1px solid #91d5ff; }
+.tag-red    { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+.tag-orange { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
+.tag-purple { background: #f9f0ff; color: #531dab; border: 1px solid #d3adf7; }
+
+.btn { display: inline-block; padding: 6px 16px; border-radius: 4px; border: 1px solid #d9d9d9; background: #fff; color: #333; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.btn:hover { color: #2a5298; border-color: #2a5298; }
+.btn-primary { background: #2a5298; color: #fff; border-color: #2a5298; }
+.btn-primary:hover { background: #1e3c72; color: #fff; }
+.btn-danger  { background: #f5222d; color: #fff; border-color: #f5222d; }
+.btn-danger:hover { background: #cf1322; color: #fff; }
+.btn-sm { padding: 3px 10px; font-size: 12px; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+th { background: #fafafa; color: #666; font-weight: 600; font-size: 13px; }
+tr:hover td { background: #fafbfc; }
+
+.dns-table { font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; }
+.dns-table code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+
+.login-bg { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; }
+.login-card { background: #fff; border-radius: 12px; padding: 40px; width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
+.login-card h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #333; }
+.login-card p { text-align: center; color: #888; margin-bottom: 28px; font-size: 13px; }
+.login-card .form-item { margin-bottom: 16px; }
+.login-card input { width: 100%; padding: 11px 14px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; }
+.login-card input:focus { outline: none; border-color: #667eea; }
+.login-card button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: #fff; font-size: 15px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+.login-card button:hover { opacity: 0.95; }
+
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.text-muted { color: #888; }
+.text-sm { font-size: 12px; }
+.fw-bold { font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 登录页 -->
+  <div v-if="!loggedIn" class="login-bg">
+    <div class="login-card">
+      <h1><i class="fa fa-envelope" style="color:#667eea;"></i> MailSystem</h1>
+      <p>邮件系统管理后台</p>
+      <div class="form-item">
+        <input v-model="loginForm.username" placeholder="用户名" @keyup.enter="doLogin">
+      </div>
+      <div class="form-item">
+        <input v-model="loginForm.password" type="password" placeholder="密码" @keyup.enter="doLogin">
+      </div>
+      <button @click="doLogin" :disabled="logging">{{ logging ? '登录中...' : '登 录' }}</button>
+      <p v-if="loginError" style="color:#f5222d; margin-top:12px; font-size:13px;">{{ loginError }}</p>
+    </div>
+  </div>
+
+  <!-- 主界面 -->
+  <div v-else class="layout">
+    <aside class="sidebar">
+      <div class="logo">
+        <i class="fa fa-envelope"></i> MailSystem
+      </div>
+      <ul class="menu">
+        <li class="group">控制台</li>
+        <li :class="{active: page==='dashboard'}" @click="page='dashboard'"><i class="fa fa-tachometer"></i> 仪表盘</li>
+        <li class="group">邮件</li>
+        <li :class="{active: page==='domains'}" @click="page='domains'"><i class="fa fa-globe"></i> 域名管理</li>
+        <li :class="{active: page==='mailboxes'}" @click="page='mailboxes'"><i class="fa fa-inbox"></i> 邮箱管理</li>
+        <li :class="{active: page==='emails'}" @click="page='emails'"><i class="fa fa-envelope-o"></i> 邮件列表</li>
+        <li class="group">服务</li>
+        <li :class="{active: page==='ports'}" @click="page='ports'"><i class="fa fa-plug"></i> 端口管理</li>
+        <li :class="{active: page==='services'}" @click="page='services'"><i class="fa fa-cogs"></i> 服务状态</li>
+        <li class="group">系统</li>
+        <li :class="{active: page==='apikeys'}" @click="page='apikeys'"><i class="fa fa-key"></i> API 密钥</li>
+        <li v-if="user.role==='admin'" :class="{active: page==='users'}" @click="page='users'"><i class="fa fa-users"></i> 用户管理</li>
+        <li v-if="user.role==='admin'" :class="{active: page==='settings'}" @click="page='settings'"><i class="fa fa-cog"></i> 系统设置</li>
+        <li v-if="user.role==='admin'" :class="{active: page==='logs'}" @click="page='logs'"><i class="fa fa-list-alt"></i> 操作日志</li>
+        <li :class="{active: page==='info'}" @click="page='info'"><i class="fa fa-info-circle"></i> 系统信息</li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div class="title">{{ pageTitle }}</div>
+        <div class="user">
+          <span><i class="fa fa-user-circle-o"></i> {{ user.display_name || user.username }}</span>
+          <span class="tag tag-blue">{{ user.role === 'admin' ? '管理员' : '用户' }}</span>
+          <span class="avatar">{{ (user.username || 'U')[0].toUpperCase() }}</span>
+          <a href="javascript:;" @click="doLogout" style="color:#888;"><i class="fa fa-sign-out"></i> 退出</a>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- 仪表盘 -->
+        <div :class="['page', {active: page==='dashboard'}]">
+          <div class="stats-grid">
+            <div class="stat-card" v-for="s in statsCards" :key="s.label">
+              <div class="label">{{ s.label }}</div>
+              <div class="value">{{ s.value }}</div>
+              <i :class="['fa', s.icon, 'icon']"></i>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">服务状态</div>
+            <div v-if="!services.length" class="empty"><i class="fa fa-plug"></i><p>暂无服务</p></div>
+            <div v-else>
+              <div v-for="s in services" :key="s.id" class="service-row">
+                <i :class="['fa', s.service==='smtp'?'fa-envelope':(s.service==='imap'?'fa-inbox':'fa-download'), 'fa-2x']" :style="{color: s.service==='smtp'?'#2a5298':(s.service==='imap'?'#52c41a':'#fa8c16'), marginRight:'14px'}"></i>
+                <div class="service-info">
+                  <div class="name">{{ s.service.toUpperCase() }} : {{ s.port }} <span class="tag tag-blue" v-if="s.ssl">SSL</span><span class="tag tag-purple" v-if="s.tls">STARTTLS</span></div>
+                  <div class="desc">{{ s.service==='smtp'?'发送邮件':(s.service==='imap'?'接收/同步邮件':'下载邮件') }}</div>
+                </div>
+                <span><span :class="['status-dot', s.running?'status-running':'status-stopped']"></span>{{ s.running?'运行中':'已停止' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">快速指南</div>
+            <ol style="padding-left:24px; line-height:1.9; color:#555; font-size:14px;">
+              <li>在「<a href="javascript:;" @click="page='domains'">域名管理</a>」中添加你的邮件域名（如 example.com）</li>
+              <li>在「<a href="javascript:;" @click="page='mailboxes'">邮箱管理</a>」中创建用户邮箱（user@example.com）</li>
+              <li>在「<a href="javascript:;" @click="page='ports'">端口管理</a>」中查看/自定义 SMTP/POP3/IMAP 端口</li>
+              <li>在域名 DNS 中添加对应的 MX/A/TXT 记录（域名详情页可查看）</li>
+              <li>执行 <code>bash scripts/start-services.sh</code> 启动邮件协议服务</li>
+              <li>使用任意邮件客户端 (如 Outlook/Foxmail) 即可收发邮件</li>
+              <li>通过「<a href="javascript:;" @click="page='apikeys'">API 密钥</a>」生成 Token 进行第三方对接</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- 域名管理 -->
+        <div :class="['page', {active: page==='domains'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>域名列表 <span class="text-muted text-sm">共 {{ domains.length }} 个</span></span>
+              <div class="actions">
+                <button class="btn btn-primary" @click="showDomainDialog()"><i class="fa fa-plus"></i> 添加域名</button>
+              </div>
+            </div>
+            <table v-if="domains.length">
+              <thead><tr><th>ID</th><th>域名</th><th>状态</th><th>说明</th><th>创建时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="d in domains" :key="d.id">
+                  <td>{{ d.id }}</td>
+                  <td><strong>{{ d.domain }}</strong></td>
+                  <td><span :class="['tag', d.status==1?'tag-green':'tag-red']">{{ d.status==1?'启用':'禁用' }}</span></td>
+                  <td class="text-muted">{{ d.description || '-' }}</td>
+                  <td class="text-muted text-sm">{{ d.created_at }}</td>
+                  <td>
+                    <button class="btn btn-sm" @click="showDomainDns(d)">DNS</button>
+                    <button class="btn btn-sm" @click="showDomainDialog(d)">编辑</button>
+                    <button v-if="user.role==='admin'" class="btn btn-sm btn-danger" @click="deleteDomain(d)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-globe"></i><p>暂无域名，点击右上角添加</p></div>
+          </div>
+        </div>
+
+        <!-- 邮箱管理 -->
+        <div :class="['page', {active: page==='mailboxes'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>邮箱列表 <span class="text-muted text-sm">共 {{ mailboxes.length }} 个</span></span>
+              <div class="actions">
+                <button class="btn btn-primary" @click="showMailboxDialog()"><i class="fa fa-plus"></i> 创建邮箱</button>
+              </div>
+            </div>
+            <table v-if="mailboxes.length">
+              <thead><tr><th>ID</th><th>邮箱地址</th><th>域名</th><th>显示名</th><th>配额</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="m in mailboxes" :key="m.id">
+                  <td>{{ m.id }}</td>
+                  <td><i class="fa fa-envelope" style="color:#2a5298;"></i> <strong>{{ m.full_address }}</strong></td>
+                  <td>{{ m.domain }}</td>
+                  <td>{{ m.display_name || '-' }}</td>
+                  <td>{{ m.used_mb }} / {{ m.quota_mb }} MB</td>
+                  <td><span :class="['tag', m.status==1?'tag-green':'tag-red']">{{ m.status==1?'正常':'禁用' }}</span></td>
+                  <td>
+                    <button class="btn btn-sm" @click="showMailboxDialog(m)">编辑</button>
+                    <button class="btn btn-sm btn-danger" @click="deleteMailbox(m)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-inbox"></i><p>暂无邮箱</p></div>
+          </div>
+        </div>
+
+        <!-- 邮件列表 -->
+        <div :class="['page', {active: page==='emails'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>邮件记录 <span class="text-muted text-sm">共 {{ emails.total }} 封</span></span>
+              <div class="actions flex gap-2">
+                <select class="btn" v-model="emailFilter.mailboxId">
+                  <option value="">选择邮箱</option>
+                  <option v-for="m in mailboxes" :key="m.id" :value="m.id">{{ m.full_address }}</option>
+                </select>
+                <select class="btn" v-model="emailFilter.folder">
+                  <option value="INBOX">收件箱</option>
+                  <option value="SENT">已发送</option>
+                  <option value="DRAFTS">草稿</option>
+                  <option value="TRASH">已删除</option>
+                  <option value="JUNK">垃圾邮件</option>
+                </select>
+                <button class="btn" @click="loadEmails">刷新</button>
+              </div>
+            </div>
+            <table v-if="emails.list.length">
+              <thead><tr><th>发件人</th><th>主题</th><th>收件人</th><th>大小</th><th>时间</th><th>方向</th></tr></thead>
+              <tbody>
+                <tr v-for="e in emails.list" :key="e.id" @click="showEmail(e)" style="cursor:pointer;">
+                  <td><i v-if="!e.is_read" class="fa fa-circle" style="color:#2a5298; font-size:8px;"></i> {{ e.from_name || e.from_address }}</td>
+                  <td>{{ e.subject || '(无主题)' }}</td>
+                  <td class="text-muted text-sm">{{ e.to_addresses }}</td>
+                  <td class="text-muted text-sm">{{ Math.round(e.size_bytes/1024) }} KB</td>
+                  <td class="text-muted text-sm">{{ e.created_at }}</td>
+                  <td><span :class="['tag', e.direction==='in'?'tag-blue':'tag-purple']">{{ e.direction==='in'?'收':'发' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-envelope-o"></i><p>暂无邮件</p></div>
+          </div>
+        </div>
+
+        <!-- 端口管理 -->
+        <div :class="['page', {active: page==='ports'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>邮件协议端口</span>
+              <div class="actions">
+                <button v-if="user.role==='admin'" class="btn btn-primary" @click="showPortDialog()"><i class="fa fa-plus"></i> 添加端口</button>
+              </div>
+            </div>
+            <table v-if="ports.length">
+              <thead><tr><th>ID</th><th>服务</th><th>端口</th><th>加密</th><th>绑定 IP</th><th>状态</th><th>说明</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="p in ports" :key="p.id">
+                  <td>{{ p.id }}</td>
+                  <td><span :class="['tag', p.service==='smtp'?'tag-blue':(p.service==='imap'?'tag-green':'tag-orange')]">{{ p.service.toUpperCase() }}</span></td>
+                  <td><strong>{{ p.port }}</strong></td>
+                  <td>
+                    <span class="tag tag-purple" v-if="p.ssl">SSL</span>
+                    <span class="tag tag-orange" v-if="p.tls">STARTTLS</span>
+                    <span class="text-muted text-sm" v-if="!p.ssl && !p.tls">明文</span>
+                  </td>
+                  <td class="text-sm">{{ p.bind_ip }}</td>
+                  <td>
+                    <span :class="['tag', p.enabled==1?'tag-green':'tag-red']">{{ p.enabled==1?'启用':'禁用' }}</span>
+                    <span class="text-muted text-sm" v-if="portStatus[p.id] !== undefined">
+                      · <span :style="{color: portStatus[p.id]?'#52c41a':'#f5222d'}">{{ portStatus[p.id]?'运行':'停止' }}</span>
+                    </span>
+                  </td>
+                  <td class="text-muted">{{ p.description || '-' }}</td>
+                  <td>
+                    <button class="btn btn-sm" @click="togglePort(p)">{{ p.enabled==1?'禁用':'启用' }}</button>
+                    <button class="btn btn-sm" @click="testPort(p)">测试</button>
+                    <button v-if="user.role==='admin'" class="btn btn-sm btn-danger" @click="deletePort(p)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-plug"></i><p>暂无端口</p></div>
+            <div style="margin-top:16px; padding:12px 16px; background:#e6f7ff; border-radius:6px; color:#096dd9; font-size:13px;">
+              <i class="fa fa-info-circle"></i> <strong>SSL 加密端口</strong>：SMTP 465 / POP3 995 / IMAP 993（连接即 TLS）。<br>
+              <strong>STARTTLS 端口</strong>：SMTP 587 / IMAP 143（先明文连接，EHLO 后升级 TLS）。<br>
+              <strong>明文端口</strong>：SMTP 25 / POP3 110（仅用于内部网络）。
+            </div>
+          </div>
+        </div>
+
+        <!-- 服务状态 -->
+        <div :class="['page', {active: page==='services'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>服务实时状态</span>
+              <div class="actions">
+                <button class="btn" @click="loadServices"><i class="fa fa-refresh"></i> 刷新</button>
+              </div>
+            </div>
+            <table v-if="services.length">
+              <thead><tr><th>服务</th><th>端口</th><th>加密</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr v-for="s in services" :key="s.id">
+                  <td><strong>{{ s.service.toUpperCase() }}</strong></td>
+                  <td>{{ s.port }}</td>
+                  <td>
+                    <span class="tag tag-purple" v-if="s.ssl">SSL</span>
+                    <span class="tag tag-orange" v-if="s.tls">STARTTLS</span>
+                    <span v-if="!s.ssl && !s.tls">明文</span>
+                  </td>
+                  <td><span :class="['tag', s.running?'tag-green':'tag-red']">{{ s.running?'运行中':'已停止' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-cogs"></i><p>暂无服务</p></div>
+          </div>
+        </div>
+
+        <!-- API 密钥 -->
+        <div :class="['page', {active: page==='apikeys'}]">
+          <div class="card">
+            <div class="card-title">
+              <span>API 密钥</span>
+              <div class="actions">
+                <button class="btn btn-primary" @click="showApiKeyDialog()"><i class="fa fa-plus"></i> 创建密钥</button>
+              </div>
+            </div>
+            <table v-if="apiKeys.length">
+              <thead><tr><th>名称</th><th>Access Key</th><th>权限</th><th>状态</th><th>最后使用</th><th>创建时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="k in apiKeys" :key="k.id">
+                  <td><strong>{{ k.name }}</strong></td>
+                  <td><code style="background:#f5f5f5; padding:2px 6px; border-radius:3px; font-size:12px;">{{ k.access_key }}</code></td>
+                  <td><span class="tag tag-blue">{{ k.permissions }}</span></td>
+                  <td><span :class="['tag', k.status==1?'tag-green':'tag-red']">{{ k.status==1?'启用':'禁用' }}</span></td>
+                  <td class="text-muted text-sm">{{ k.last_used_at || '从未' }}</td>
+                  <td class="text-muted text-sm">{{ k.created_at }}</td>
+                  <td><button class="btn btn-sm btn-danger" @click="deleteApiKey(k)">删除</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-key"></i><p>暂无 API 密钥</p></div>
+          </div>
+        </div>
+
+        <!-- 用户管理 -->
+        <div :class="['page', {active: page==='users'}]" v-if="user.role==='admin'">
+          <div class="card">
+            <div class="card-title">
+              <span>系统用户</span>
+              <div class="actions">
+                <button class="btn btn-primary" @click="showUserDialog()"><i class="fa fa-plus"></i> 添加用户</button>
+              </div>
+            </div>
+            <table v-if="users.length">
+              <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="u in users" :key="u.id">
+                  <td>{{ u.id }}</td>
+                  <td><strong>{{ u.username }}</strong></td>
+                  <td>{{ u.email || '-' }}</td>
+                  <td><span :class="['tag', u.role==='admin'?'tag-purple':'tag-blue']">{{ u.role==='admin'?'管理员':'用户' }}</span></td>
+                  <td><span :class="['tag', u.status==1?'tag-green':'tag-red']">{{ u.status==1?'正常':'禁用' }}</span></td>
+                  <td class="text-muted text-sm">{{ u.last_login_at || '从未' }}</td>
+                  <td>
+                    <button class="btn btn-sm" @click="showUserDialog(u)">编辑</button>
+                    <button v-if="u.id !== user.id" class="btn btn-sm btn-danger" @click="deleteUser(u)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 系统设置 -->
+        <div :class="['page', {active: page==='settings'}]" v-if="user.role==='admin'">
+          <div class="card">
+            <div class="card-title">系统设置</div>
+            <div v-for="g in settingGroups" :key="g.name" style="margin-bottom:24px;">
+              <h3 style="font-size:14px; color:#666; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #f0f0f0;">{{ g.label }}</h3>
+              <div v-for="s in g.items" :key="s.id" class="flex" style="align-items:center; padding:8px 0;">
+                <div style="width:200px; color:#555; font-size:13px;">{{ s.description || s.key_name }}</div>
+                <div style="flex:1;">
+                  <input v-if="s.key_name !== 'admin_path'" v-model="settings[s.key_name]" :placeholder="s.value" class="btn" style="width:100%; text-align:left; padding:6px 10px;">
+                  <input v-else v-model="settings[s.key_name]" class="btn" style="width:100%; text-align:left; padding:6px 10px;" pattern="[a-zA-Z0-9_-]+">
+                </div>
+                <div class="text-muted text-sm" style="width:140px; padding-left:12px;">{{ s.key_name }}</div>
+              </div>
+            </div>
+            <button class="btn btn-primary" @click="saveSettings"><i class="fa fa-save"></i> 保存设置</button>
+          </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div :class="['page', {active: page==='logs'}]" v-if="user.role==='admin'">
+          <div class="card">
+            <div class="card-title">操作日志 <span class="text-muted text-sm">最近 100 条</span></div>
+            <table v-if="logs.length">
+              <thead><tr><th>时间</th><th>用户</th><th>操作</th><th>目标</th><th>IP</th></tr></thead>
+              <tbody>
+                <tr v-for="l in logs" :key="l.id">
+                  <td class="text-muted text-sm">{{ l.created_at }}</td>
+                  <td>{{ l.username || '-' }}</td>
+                  <td><span class="tag tag-blue">{{ l.action }}</span></td>
+                  <td class="text-sm">{{ l.target || '-' }}</td>
+                  <td class="text-muted text-sm">{{ l.ip_address }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><i class="fa fa-list-alt"></i><p>暂无日志</p></div>
+          </div>
+        </div>
+
+        <!-- 系统信息 -->
+        <div :class="['page', {active: page==='info'}]">
+          <div class="card">
+            <div class="card-title">系统信息</div>
+            <table>
+              <tr v-for="(v, k) in sysInfo" :key="k">
+                <td style="width:200px;" class="text-muted">{{ k }}</td>
+                <td v-if="typeof v === 'boolean'">
+                  <span :class="['tag', v?'tag-green':'tag-red']">{{ v ? '已安装' : '未安装' }}</span>
+                </td>
+                <td v-else-if="typeof v === 'object'">
+                  <span v-for="(vv, kk) in v" :key="kk" class="tag" :class="vv?'tag-green':'tag-red'" style="margin-right:6px;">{{ kk }}: {{ vv?'✓':'✗' }}</span>
+                </td>
+                <td v-else>{{ v }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 通用对话框 (简易实现) -->
+  <div v-if="dialog.show" @click.self="dialog.show=false" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff; border-radius:8px; padding:24px; width:480px; max-width:90vw;">
+      <h3 style="margin-bottom:16px; font-size:16px;">{{ dialog.title }}</h3>
+      <div v-html="dialog.body"></div>
+      <div style="margin-top:20px; text-align:right;">
+        <button class="btn" @click="dialog.show=false" style="margin-right:8px;">取消</button>
+        <button class="btn btn-primary" @click="dialog.onOk">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key 展示 -->
+  <div v-if="apiKeyDialog.show" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff; border-radius:8px; padding:24px; width:520px; max-width:90vw;">
+      <h3 style="margin-bottom:12px;">API Key 已生成</h3>
+      <p style="color:#f5222d; font-size:13px; margin-bottom:16px;"><i class="fa fa-warning"></i> 请立即保存 Secret Key，关闭后无法再次查看！</p>
+      <div style="margin-bottom:10px;">
+        <div class="text-muted text-sm">Access Key</div>
+        <input :value="apiKeyDialog.accessKey" readonly class="btn" style="width:100%; text-align:left; font-family:monospace;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="text-muted text-sm">Secret Key</div>
+        <input :value="apiKeyDialog.secretKey" readonly class="btn" style="width:100%; text-align:left; font-family:monospace;">
+      </div>
+      <div style="text-align:right;">
+        <button class="btn btn-primary" @click="apiKeyDialog.show=false">已保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 邮件详情 -->
+  <div v-if="emailDetail.show" @click.self="emailDetail.show=false" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff; border-radius:8px; width:720px; max-width:90vw; max-height:85vh; display:flex; flex-direction:column;">
+      <div style="padding:16px 24px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center;">
+        <h3>{{ emailDetail.data.subject || '(无主题)' }}</h3>
+        <a href="javascript:;" @click="emailDetail.show=false" style="font-size:20px; color:#999;">×</a>
+      </div>
+      <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+        <div style="margin-bottom:10px;"><strong>发件人:</strong> {{ emailDetail.data.from_name }} &lt;{{ emailDetail.data.from_address }}&gt;</div>
+        <div style="margin-bottom:10px;"><strong>收件人:</strong> {{ emailDetail.data.to_addresses }}</div>
+        <div style="margin-bottom:10px;"><strong>时间:</strong> {{ emailDetail.data.created_at }}</div>
+        <div style="margin-bottom:14px;"><strong>大小:</strong> {{ Math.round(emailDetail.data.size_bytes/1024) }} KB</div>
+        <div style="border-top:1px solid #f0f0f0; padding-top:14px;">
+          <div v-if="emailDetail.data.body_html" v-html="emailDetail.data.body_html" style="line-height:1.7;"></div>
+          <pre v-else style="white-space:pre-wrap; font-family:inherit; line-height:1.7;">{{ emailDetail.data.body_text }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

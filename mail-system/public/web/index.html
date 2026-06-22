@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailSystem - 个人邮箱</title>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif; background: #f5f5f5; height: 100vh; overflow: hidden; }
+#app { height: 100vh; }
+.webmail { display: flex; height: 100vh; }
+.folders { width: 220px; background: #2c3e50; color: #ecf0f1; padding: 16px 0; flex-shrink: 0; }
+.folders .logo { padding: 0 20px 20px; font-size: 18px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; }
+.folders .folder { padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s; }
+.folders .folder:hover { background: rgba(255,255,255,0.05); }
+.folders .folder.active { background: #3498db; }
+.folders .folder i { width: 16px; }
+
+.list { width: 360px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; }
+.list .toolbar { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+.list .toolbar .actions { display: flex; gap: 6px; }
+.list .emails { flex: 1; overflow-y: auto; }
+.list .email-item { padding: 12px 16px; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: background 0.15s; }
+.list .email-item:hover { background: #f8f9fa; }
+.list .email-item.active { background: #e3f2fd; }
+.list .email-item.unread { background: #fafbfc; border-left: 3px solid #3498db; }
+.list .email-item .row1 { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.list .email-item .from { font-weight: 600; color: #2c3e50; font-size: 14px; }
+.list .email-item .date { color: #999; font-size: 12px; }
+.list .email-item .subject { color: #34495e; font-size: 13px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .email-item .preview { color: #7f8c8d; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.viewer { flex: 1; display: flex; flex-direction: column; background: #fff; }
+.viewer .header { padding: 16px 24px; border-bottom: 1px solid #f0f0f0; }
+.viewer .header .actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.viewer .header .subject { font-size: 20px; font-weight: 600; margin-bottom: 10px; }
+.viewer .header .meta { color: #666; font-size: 13px; }
+.viewer .body { flex: 1; padding: 20px 24px; overflow-y: auto; line-height: 1.7; }
+.viewer .body pre { white-space: pre-wrap; font-family: inherit; }
+
+.empty-viewer { flex: 1; display: flex; align-items: center; justify-content: center; color: #bdc3c7; font-size: 16px; }
+.empty-viewer i { font-size: 80px; margin-bottom: 20px; display: block; }
+
+.composer { position: fixed; right: 20px; bottom: 0; width: 540px; height: 480px; background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; display: flex; flex-direction: column; z-index: 100; }
+.composer .head { padding: 10px 16px; background: #34495e; color: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+.composer .body { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; }
+.composer input, .composer textarea { border: 1px solid #e0e0e0; padding: 8px 10px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; font-family: inherit; }
+.composer textarea { flex: 1; resize: none; }
+.composer .foot { padding: 10px 16px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+.btn { padding: 6px 14px; border: 1px solid #d0d0d0; background: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.btn-primary { background: #3498db; color: #fff; border-color: #3498db; }
+.btn-primary:hover { background: #2980b9; }
+
+.login-page { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; }
+.login-card { background: #fff; padding: 36px; border-radius: 12px; width: 360px; box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
+.login-card h1 { text-align: center; margin-bottom: 6px; }
+.login-card p { text-align: center; color: #888; margin-bottom: 20px; font-size: 13px; }
+.login-card input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 12px; font-size: 14px; }
+.login-card button { width: 100%; padding: 11px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: #fff; border-radius: 5px; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+@media (max-width: 800px) {
+  .webmail { flex-direction: column; }
+  .folders { width: 100%; height: auto; padding: 8px 0; display: flex; overflow-x: auto; }
+  .folders .logo { display: none; }
+  .list { width: 100%; }
+  .viewer { display: none; }
+  .viewer.show-mobile { display: flex; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div v-if="!loggedIn" class="login-page">
+    <div class="login-card">
+      <h1>📧 MailSystem</h1>
+      <p>登录您的邮箱</p>
+      <input v-model="loginForm.address" placeholder="邮箱地址" @keyup.enter="doLogin">
+      <input v-model="loginForm.password" type="password" placeholder="密码" @keyup.enter="doLogin">
+      <button @click="doLogin" :disabled="logging">{{ logging?'登录中...':'登录' }}</button>
+      <p v-if="loginError" style="color:#f5222d; margin-top:10px; font-size:12px;">{{ loginError }}</p>
+    </div>
+  </div>
+  <div v-else class="webmail">
+    <aside class="folders">
+      <div class="logo">📧 {{ user.full_address }}</div>
+      <div v-for="f in folders" :key="f.key" :class="['folder', {active: folder===f.key}]" @click="selectFolder(f.key)">
+        <i :class="['fa', f.icon]"></i> {{ f.name }}
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:16px; padding-top:16px;">
+        <div class="folder" @click="compose"><i class="fa fa-pencil"></i> 写邮件</div>
+        <div class="folder" @click="doLogout"><i class="fa fa-sign-out"></i> 退出</div>
+      </div>
+    </aside>
+    <div class="list">
+      <div class="toolbar">
+        <span><strong>{{ currentFolderName }}</strong> · {{ emails.total }} 封</span>
+        <div class="actions">
+          <button class="btn" @click="loadEmails"><i class="fa fa-refresh"></i></button>
+        </div>
+      </div>
+      <div class="emails">
+        <div v-if="!emails.list.length" style="text-align:center; padding:40px; color:#999;">
+          <i class="fa fa-inbox" style="font-size:36px; opacity:0.3;"></i>
+          <p style="margin-top:10px;">暂无邮件</p>
+        </div>
+        <div v-for="e in emails.list" :key="e.id" :class="['email-item', {unread: !e.is_read, active: current && current.id===e.id}]" @click="openEmail(e)">
+          <div class="row1">
+            <span class="from">{{ e.from_name || e.from_address }}</span>
+            <span class="date">{{ (e.created_at || '').substring(5,16) }}</span>
+          </div>
+          <div class="subject">{{ e.subject || '(无主题)' }}</div>
+          <div class="preview">{{ e.body_text || '(无内容预览)' }}</div>
+        </div>
+      </div>
+    </div>
+    <div v-if="current" class="viewer">
+      <div class="header">
+        <div class="actions">
+          <button class="btn" @click="deleteEmail(current)"><i class="fa fa-trash"></i> 删除</button>
+        </div>
+        <h2 class="subject">{{ current.subject || '(无主题)' }}</h2>
+        <div class="meta">
+          <div><strong>发件人：</strong>{{ current.from_name }} &lt;{{ current.from_address }}&gt;</div>
+          <div><strong>收件人：</strong>{{ current.to_addresses }}</div>
+          <div><strong>时间：</strong>{{ current.created_at }}</div>
+        </div>
+      </div>
+      <div class="body">
+        <div v-if="current.body_html" v-html="current.body_html"></div>
+        <pre v-else>{{ current.body_text }}</pre>
+      </div>
+    </div>
+    <div v-else class="empty-viewer">
+      <div style="text-align:center;">
+        <i class="fa fa-envelope-open-o"></i>
+        <p>选择邮件以阅读</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 写邮件 -->
+  <div v-if="composer.show" class="composer">
+    <div class="head">
+      <span>新邮件</span>
+      <a href="javascript:;" @click="composer.show=false" style="color:#fff;">×</a>
+    </div>
+    <div class="body">
+      <input :value="user.full_address" readonly>
+      <input v-model="composer.to" placeholder="收件人 (多个用逗号分隔)">
+      <input v-model="composer.subject" placeholder="主题">
+      <textarea v-model="composer.body" placeholder="邮件正文..."></textarea>
+    </div>
+    <div class="foot">
+      <button class="btn" @click="composer.show=false">取消</button>
+      <button class="btn btn-primary" @click="sendEmail" :disabled="composer.sending">{{ composer.sending?'发送中...':'发送' }}</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
