@@ -95,7 +95,8 @@ class EmailService:
             to_email=to_email,
             to_name=to_name,
             subject=subject,
-            html_content=html_content,
+            body_html=html_content,
+            body_text=text_content,
             template_id=template_id,
             status='sending',
         )
